@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -34,6 +34,12 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 
   const [cccd, setCccd] = useState(initialCccd);
   const [password, setPassword] = useState('');
+
+  useEffect(() => {
+    if (initialCccd) {
+      setCccd(initialCccd);
+    }
+  }, [initialCccd]);
 
   const [errors, setErrors] = useState<{ cccd?: string; password?: string; general?: string }>({});
   const [showServerConfig, setShowServerConfig] = useState(false);
@@ -111,6 +117,19 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
               Sử dụng số Căn cước công dân (12 chữ số) và mật khẩu đã đăng ký để truy cập hệ thống.
             </Text>
           </View>
+
+          {/* Hộp thông báo đã đăng ký thành công và tự động điền CCCD */}
+          {initialCccd ? (
+            <View style={styles.successBanner}>
+              <Ionicons name="checkmark-circle" size={22} color="#059669" />
+              <View style={styles.successBannerContent}>
+                <Text style={styles.successBannerTitle}>Đăng ký tài khoản thành công!</Text>
+                <Text style={styles.successBannerMessage}>
+                  Số CCCD <Text style={{ fontWeight: '700' }}>{initialCccd}</Text> đã được tự động điền sẵn. Vui lòng nhập mật khẩu để đăng nhập.
+                </Text>
+              </View>
+            </View>
+          ) : null}
 
           {/* Hộp thông báo lỗi từ Backend nếu có */}
           {errors.general && (
@@ -245,6 +264,31 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6B7280',
     lineHeight: 20,
+  },
+  successBanner: {
+    flexDirection: 'row',
+    backgroundColor: '#ECFDF5',
+    borderWidth: 1,
+    borderColor: '#34D399',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 18,
+    alignItems: 'flex-start',
+  },
+  successBannerContent: {
+    marginLeft: 10,
+    flex: 1,
+  },
+  successBannerTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#065F46',
+    marginBottom: 2,
+  },
+  successBannerMessage: {
+    fontSize: 12,
+    color: '#047857',
+    lineHeight: 16,
   },
   errorBanner: {
     flexDirection: 'row',

@@ -6,6 +6,7 @@ import { WelcomeScreen } from './src/screens/WelcomeScreen';
 import { LoginScreen } from './src/screens/LoginScreen';
 import { RegisterScreen } from './src/screens/RegisterScreen';
 import { HomeScreen } from './src/screens/HomeScreen';
+import { BusinessInfoScreen } from './src/screens/BusinessInfoScreen';
 import { BrandLogo } from './src/components/BrandLogo';
 
 type AuthScreenState = 'welcome' | 'login' | 'register';
@@ -25,8 +26,20 @@ const MainNavigator: React.FC = () => {
     );
   }
 
-  // 2. Nếu đã đăng nhập thành công (có user và JWT token) -> Điều hướng đến Trang chủ (HomeScreen)
+  // 2. Nếu đã đăng nhập thành công (có user và JWT token)
   if (user && token) {
+    // Trường hợp 1: Nếu user lần đầu tiên đăng nhập vào -> tới trang điền chi tiết thông tin hộ kinh doanh
+    if (user.isFirstLogin === true || !user.businessGroup) {
+      return (
+        <BusinessInfoScreen
+          onComplete={() => {
+            // Sau khi ấn "Tiếp theo", hệ thống đã lưu thông tin và chuyển isFirstLogin = false
+          }}
+        />
+      );
+    }
+
+    // Trường hợp 2: Nếu từ lần thứ 2 đăng nhập -> Vào thẳng trang chủ luôn
     return <HomeScreen />;
   }
 

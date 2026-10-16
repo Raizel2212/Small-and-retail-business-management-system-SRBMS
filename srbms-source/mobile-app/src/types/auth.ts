@@ -8,8 +8,20 @@ export interface User {
   role: string;
   status: 'ACTIVE' | 'LOCKED' | string;
   dateOfBirth?: string;
+  isFirstLogin?: boolean;
+  businessGroup?: number | null;
+  businessType?: string | null;
+  otherBusinessType?: string | null;
+  businessName?: string | null;
   createdAt?: string;
   updatedAt?: string;
+}
+
+export interface BusinessProfileRequest {
+  businessGroup: number;
+  businessType: string;
+  otherBusinessType?: string;
+  businessName?: string;
 }
 
 export interface AuthData {

@@ -51,6 +51,29 @@ export const authApi = {
   },
 
   /**
+   * Cập nhật thông tin chi tiết Hộ kinh doanh (Nhóm 1-3, Loại hình, Khác)
+   * Endpoint: PUT /api/v1/user/business-profile
+   */
+  async updateBusinessProfile(payload: import('../types/auth').BusinessProfileRequest): Promise<ApiResponse<import('../types/auth').User>> {
+    const response = await apiClient.put<ApiResponse<import('../types/auth').User>>(
+      '/api/v1/user/business-profile',
+      payload
+    );
+    return response.data;
+  },
+
+  /**
+   * Lấy thông tin tài khoản và hộ kinh doanh hiện tại
+   * Endpoint: GET /api/v1/user/me
+   */
+  async getMe(): Promise<ApiResponse<import('../types/auth').User>> {
+    const response = await apiClient.get<ApiResponse<import('../types/auth').User>>(
+      '/api/v1/user/me'
+    );
+    return response.data;
+  },
+
+  /**
    * Kiểm tra kết nối tới Server
    */
   async ping(): Promise<boolean> {
