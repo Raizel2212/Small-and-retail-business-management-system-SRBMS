@@ -53,6 +53,22 @@ public class User {
     @Builder.Default
     private String status = "ACTIVE";
 
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean isFirstLogin = true;
+
+    @Column(name = "business_group")
+    private Integer businessGroup;
+
+    @Column(name = "business_type", length = 100)
+    private String businessType;
+
+    @Column(name = "other_business_type", length = 255)
+    private String otherBusinessType;
+
+    @Column(name = "business_name", length = 255)
+    private String businessName;
+
     @CreationTimestamp
     @Column(updatable = false)
     private LocalDateTime createdAt;

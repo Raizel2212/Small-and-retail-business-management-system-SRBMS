@@ -29,5 +29,10 @@ public class AuthResponse {
         private String sdt;
         private String role;
         private String status;
+        private Boolean isFirstLogin;
+        private Integer businessGroup;
+        private String businessType;
+        private String otherBusinessType;
+        private String businessName;
     }
 }

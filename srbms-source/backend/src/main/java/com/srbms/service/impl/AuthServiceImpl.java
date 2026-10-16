@@ -91,6 +91,11 @@ public class AuthServiceImpl implements AuthService {
                         .sdt(user.getSdt())
                         .role(user.getRole())
                         .status(user.getStatus())
+                        .isFirstLogin(user.getIsFirstLogin())
+                        .businessGroup(user.getBusinessGroup())
+                        .businessType(user.getBusinessType())
+                        .otherBusinessType(user.getOtherBusinessType())
+                        .businessName(user.getBusinessName())
                         .build())
                 .build();
     }

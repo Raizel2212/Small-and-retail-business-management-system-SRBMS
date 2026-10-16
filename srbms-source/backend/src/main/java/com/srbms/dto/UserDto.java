@@ -22,6 +22,11 @@ public class UserDto {
     private LocalDate dateOfBirth;
     private String role;
     private String status;
+    private Boolean isFirstLogin;
+    private Integer businessGroup;
+    private String businessType;
+    private String otherBusinessType;
+    private String businessName;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }
