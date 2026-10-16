@@ -21,6 +21,8 @@ interface AuthContextType {
   register: (payload: RegisterRequest) => Promise<string>;
   logout: () => Promise<void>;
   updateBaseUrl: (newUrl: string) => Promise<void>;
+  updateBusinessProfile: (payload: import('../types/auth').BusinessProfileRequest) => Promise<User>;
+  updateUser: (updatedUser: User) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -103,6 +105,34 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setBaseUrlState(newUrl);
   };
 
+  const updateBusinessProfile = async (
+    payload: import('../types/auth').BusinessProfileRequest
+  ): Promise<User> => {
+    setIsLoading(true);
+    try {
+      const response = await authApi.updateBusinessProfile(payload);
+      if (response.success && response.data) {
+        const mergedUser: User = {
+          ...(user as User),
+          ...response.data,
+          isFirstLogin: false,
+        };
+        await AsyncStorage.setItem(USER_STORAGE_KEY, JSON.stringify(mergedUser));
+        setUser(mergedUser);
+        return mergedUser;
+      } else {
+        throw new Error(response.message || 'Cập nhật thông tin hộ kinh doanh thất bại');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const updateUser = async (updatedUser: User) => {
+    await AsyncStorage.setItem(USER_STORAGE_KEY, JSON.stringify(updatedUser));
+    setUser(updatedUser);
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -115,6 +145,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         register,
         logout,
         updateBaseUrl,
+        updateBusinessProfile,
+        updateUser,
       }}
     >
       {children}

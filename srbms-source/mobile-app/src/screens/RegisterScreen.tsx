@@ -95,17 +95,8 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
         password,
       });
 
-      // 3. Thông báo thành công và chuyển sang màn hình Đăng nhập kèm điền sẵn số CCCD
-      Alert.alert(
-        'Đăng ký thành công',
-        `${successMessage}\n\nBạn có thể sử dụng số CCCD ${cccd.trim()} để đăng nhập ngay bây giờ.`,
-        [
-          {
-            text: 'Đăng nhập ngay',
-            onPress: () => onNavigateToLogin(cccd.trim()),
-          },
-        ]
-      );
+      // 3. Chuyển ngay sang màn hình Đăng nhập kèm điền sẵn số CCCD vừa đăng ký
+      onNavigateToLogin(cccd.trim());
     } catch (err: any) {
       // Xử lý khi Backend trả về mã lỗi 409 Conflict (Trùng CCCD, SĐT, Email) hoặc 400
       const message = err.message || 'Đăng ký không thành công. Vui lòng thử lại.';
