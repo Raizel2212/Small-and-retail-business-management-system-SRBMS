@@ -5,14 +5,14 @@ import {
   StyleSheet,
   TouchableOpacity,
   SafeAreaView,
+  Alert,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { BrandLogo } from '../components/BrandLogo';
 import { CustomButton } from '../components/CustomButton';
-import { BottomCurve } from '../components/BottomCurve';
+import { WelcomeIllustration } from '../components/WelcomeIllustration';
 import { ServerConfigModal } from '../components/ServerConfigModal';
-import { ForgotPasswordModal } from '../components/ForgotPasswordModal';
 import { useAuth } from '../context/AuthContext';
 
 interface WelcomeScreenProps {
@@ -26,60 +26,90 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
 }) => {
   const { baseUrl, updateBaseUrl } = useAuth();
   const [showServerConfig, setShowServerConfig] = useState(false);
-  const [showForgotModal, setShowForgotModal] = useState(false);
+
+  const handleOpenTerms = () => {
+    Alert.alert(
+      'Điều khoản sử dụng',
+      'Hệ thống quản lý hộ kinh doanh (SRBMS / Hovit) cam kết bảo mật và minh bạch toàn bộ dữ liệu kế toán và kê khai thuế theo quy định pháp luật Việt Nam.'
+    );
+  };
+
+  const handleOpenPrivacy = () => {
+    Alert.alert(
+      'Chính sách bảo mật',
+      'Toàn bộ thông tin cá nhân (CCCD, SĐT, Email) và dữ liệu tài chính của hộ kinh doanh được mã hóa và bảo vệ nghiêm ngặt.'
+    );
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar style="dark" />
 
-      {/* Nút cấu hình Server IP trên góc trên cùng bên phải */}
+      {/* Top Header Bar với Logo và Nút cấu hình Server */}
       <View style={styles.topBar}>
+        <BrandLogo size={42} showText={true} />
+
         <TouchableOpacity
           style={styles.serverButton}
           onPress={() => setShowServerConfig(true)}
           activeOpacity={0.7}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          <Ionicons name="settings-outline" size={18} color="#6B7280" />
+          <Ionicons name="options-outline" size={16} color="#64748B" />
           <Text style={styles.serverButtonText} numberOfLines={1}>
-            {baseUrl.replace('http://', '')}
+            {baseUrl.replace(/^https?:\/\//, '')}
           </Text>
         </TouchableOpacity>
       </View>
 
+      {/* Nội dung chính giữa */}
       <View style={styles.content}>
-        {/* Phần Logo và Khẩu hiệu (Thương hiệu HỘ KINH DOANH) */}
-        <View style={styles.logoSection}>
-          <BrandLogo size={110} />
+        {/* Hình minh họa hộ kinh doanh hình tròn chuẩn mockup */}
+        <View style={styles.illustrationSection}>
+          <WelcomeIllustration size={320} />
         </View>
 
-        {/* Khối các nút hành động tương tự giao diện mẫu */}
-        <View style={styles.actionSection}>
-          <CustomButton
-            title="Đăng nhập"
-            variant="primary"
-            onPress={onNavigateToLogin}
-            style={styles.button}
-          />
+        {/* Tiêu đề chào mừng */}
+        <View style={styles.titleSection}>
+          <Text style={styles.mainTitle}>
+            Chào mừng{'\n'}đến với Hovit!
+          </Text>
+        </View>
 
+        {/* Khối 2 nút bấm Đăng ký và Đăng nhập */}
+        <View style={styles.actionSection}>
           <CustomButton
             title="Đăng ký"
             variant="primary"
             onPress={onNavigateToRegister}
-            style={styles.button}
+            rightIcon={<Ionicons name="arrow-forward" size={18} color="#FFFFFF" />}
+            style={styles.primaryButton}
           />
 
-          <TouchableOpacity
-            style={styles.forgotButton}
-            onPress={() => setShowForgotModal(true)}
-            activeOpacity={0.6}
-          >
-            <Text style={styles.forgotText}>Quên mật khẩu?</Text>
-          </TouchableOpacity>
+          <CustomButton
+            title="Đăng nhập"
+            variant="outline"
+            onPress={onNavigateToLogin}
+            style={styles.outlineButton}
+          />
+        </View>
+
+        {/* Đoạn text chính sách và điều khoản ở chân trang */}
+        <View style={styles.termsSection}>
+          <Text style={styles.termsText}>
+            Bằng việc tiếp tục, bạn đồng ý với
+          </Text>
+          <View style={styles.termsLinksRow}>
+            <TouchableOpacity onPress={handleOpenTerms} activeOpacity={0.7}>
+              <Text style={styles.linkText}>Điều khoản sử dụng</Text>
+            </TouchableOpacity>
+            <Text style={styles.termsText}> và </Text>
+            <TouchableOpacity onPress={handleOpenPrivacy} activeOpacity={0.7}>
+              <Text style={styles.linkText}>Chính sách bảo mật.</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
-
-      {/* Đường cong màu xanh bo tròn viền dưới màn hình theo mẫu */}
-      <BottomCurve height={60} color="#4579C7" />
 
       {/* Modal cấu hình IP máy chủ */}
       <ServerConfigModal
@@ -88,12 +118,6 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
         currentUrl={baseUrl}
         onSave={updateBaseUrl}
       />
-
-      {/* Modal hướng dẫn quên mật khẩu */}
-      <ForgotPasswordModal
-        visible={showForgotModal}
-        onClose={() => setShowForgotModal(false)}
-      />
     </SafeAreaView>
   );
 };
@@ -101,65 +125,117 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#DBF8F3',
   },
   topBar: {
-    paddingHorizontal: 20,
-    paddingTop: 10,
+    paddingHorizontal: 24,
+    paddingTop: 14,
+    paddingBottom: 8,
     flexDirection: 'row',
-    justifyContent: 'flex-end',
+    justifyContent: 'space-between',
     alignItems: 'center',
     zIndex: 10,
   },
   serverButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F3F4F6',
-    paddingVertical: 6,
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 5,
     paddingHorizontal: 12,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#BFE7DE',
+    shadowColor: '#1E5E4F',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 2,
+    elevation: 1,
   },
   serverButtonText: {
-    fontSize: 12,
-    color: '#4B5563',
-    marginLeft: 6,
-    fontWeight: '500',
-    maxWidth: 160,
+    fontSize: 11,
+    color: '#265A4F',
+    marginLeft: 5,
+    fontWeight: '600',
+    maxWidth: 120,
   },
   content: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 32,
-    paddingBottom: 70, // Chừa không gian cho BottomCurve
+    paddingHorizontal: 24,
+    paddingTop: 6,
+    paddingBottom: 24,
   },
-  logoSection: {
-    marginBottom: 44,
+  illustrationSection: {
     alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 0,
+  },
+  titleSection: {
+    alignItems: 'center',
+    marginVertical: 8,
+  },
+  mainTitle: {
+    fontSize: 26,
+    fontWeight: '800',
+    color: '#123D32',
+    textAlign: 'center',
+    lineHeight: 34,
+    letterSpacing: -0.4,
   },
   actionSection: {
     width: '100%',
-    maxWidth: 320,
+    maxWidth: 340,
     alignItems: 'center',
+    gap: 12,
   },
-  button: {
-    height: 48,
-    borderRadius: 8,
-    backgroundColor: '#4579C7', // Đồng nhất màu xanh chuẩn từ thiết kế
-    marginVertical: 7,
+  primaryButton: {
+    height: 50,
+    borderRadius: 14,
+    backgroundColor: '#1E5E4F',
+    marginVertical: 0,
+    shadowColor: '#1E5E4F',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 3,
   },
-  forgotButton: {
-    marginTop: 10,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    alignSelf: 'flex-start',
+  outlineButton: {
+    height: 50,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: '#1E5E4F',
+    backgroundColor: '#FFFFFF',
+    marginVertical: 0,
+    shadowColor: '#1E5E4F',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 1,
   },
-  forgotText: {
-    color: '#1E56A0',
-    fontSize: 15,
-    fontWeight: '500',
-    textDecorationLine: 'none',
+  termsSection: {
+    alignItems: 'center',
+    marginTop: 12,
+    paddingHorizontal: 12,
+    paddingBottom: 8,
+  },
+  termsText: {
+    fontSize: 12,
+    color: '#47635D',
+    textAlign: 'center',
+    lineHeight: 18,
+  },
+  termsLinksRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    marginTop: 2,
+  },
+  linkText: {
+    fontSize: 12,
+    color: '#0D6E5D',
+    fontWeight: '700',
+    textDecorationLine: 'underline',
   },
 });
