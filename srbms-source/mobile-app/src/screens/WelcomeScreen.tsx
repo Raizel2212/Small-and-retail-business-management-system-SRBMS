@@ -18,11 +18,13 @@ import { useAuth } from '../context/AuthContext';
 interface WelcomeScreenProps {
   onNavigateToLogin: () => void;
   onNavigateToRegister: () => void;
+  onNavigateToRevenuePreview?: () => void;
 }
 
 export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
   onNavigateToLogin,
   onNavigateToRegister,
+  onNavigateToRevenuePreview,
 }) => {
   const { baseUrl, updateBaseUrl } = useAuth();
   const [showServerConfig, setShowServerConfig] = useState(false);
@@ -92,6 +94,17 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
             onPress={onNavigateToLogin}
             style={styles.outlineButton}
           />
+
+          {onNavigateToRevenuePreview && (
+            <TouchableOpacity
+              style={styles.revenuePreviewBtn}
+              onPress={onNavigateToRevenuePreview}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="receipt-outline" size={16} color="#059669" />
+              <Text style={styles.revenuePreviewBtnText}>Xem chi tiết mục Doanh thu (Demo)</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Đoạn text chính sách và điều khoản ở chân trang */}
@@ -237,5 +250,23 @@ const styles = StyleSheet.create({
     color: '#0D6E5D',
     fontWeight: '700',
     textDecorationLine: 'underline',
+  },
+  revenuePreviewBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    backgroundColor: '#ECFDF5',
+    borderWidth: 1,
+    borderColor: '#6EE7B7',
+    marginTop: 10,
+  },
+  revenuePreviewBtnText: {
+    marginLeft: 6,
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#059669',
   },
 });

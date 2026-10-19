@@ -19,7 +19,11 @@ import { ServerConfigModal } from '../components/ServerConfigModal';
 
 type BottomTabType = 'home' | 'search' | 'camera' | 'profile' | 'settings';
 
-export const HomeScreen: React.FC = () => {
+export interface HomeScreenProps {
+  onNavigateToRevenueDetail?: () => void;
+}
+
+export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigateToRevenueDetail }) => {
   const { user, token, logout, baseUrl, updateBaseUrl } = useAuth();
 
   const [activeTab, setActiveTab] = useState<BottomTabType>('home');
@@ -195,14 +199,26 @@ export const HomeScreen: React.FC = () => {
         <View style={styles.cardActionsRow}>
           <TouchableOpacity
             style={[styles.cardActionBtn, { backgroundColor: '#ECFDF5' }]}
-            onPress={() => Alert.alert('Tạo đơn bán', 'Chức năng thêm đơn bán hàng mới')}
+            onPress={() => {
+              if (onNavigateToRevenueDetail) {
+                onNavigateToRevenueDetail();
+              } else {
+                Alert.alert('Tạo đơn bán', 'Chức năng thêm đơn bán hàng mới');
+              }
+            }}
           >
             <Ionicons name="add-circle-outline" size={18} color="#059669" />
             <Text style={[styles.cardActionBtnText, { color: '#059669' }]}>+ Thêm hóa đơn</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.cardDetailBtn}
-            onPress={() => Alert.alert('Sổ doanh thu', 'Xem toàn bộ lịch sử bán hàng')}
+            onPress={() => {
+              if (onNavigateToRevenueDetail) {
+                onNavigateToRevenueDetail();
+              } else {
+                Alert.alert('Sổ doanh thu', 'Xem toàn bộ lịch sử bán hàng');
+              }
+            }}
           >
             <Text style={styles.cardDetailBtnText}>Chi tiết doanh thu</Text>
             <Ionicons name="chevron-forward" size={14} color="#64748B" />
