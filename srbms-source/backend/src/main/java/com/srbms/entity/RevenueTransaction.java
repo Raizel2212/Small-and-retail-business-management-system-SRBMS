@@ -39,6 +39,20 @@ public class RevenueTransaction {
     @Column(name = "amount", nullable = false, precision = 15, scale = 2)
     private BigDecimal amount;
 
+    @Column(name = "product_name", length = 255)
+    private String productName;
+
+    @Column(name = "quantity")
+    @Builder.Default
+    private Integer quantity = 1;
+
+    @Column(name = "unit_price", precision = 15, scale = 2)
+    private BigDecimal unitPrice;
+
+    @Column(name = "is_retail_customer")
+    @Builder.Default
+    private Boolean isRetailCustomer = false;
+
     // TIEN_MAT (Tiền mặt), CHUYEN_KHOAN (Chuyển khoản)
     @Column(name = "payment_method", nullable = false, length = 50)
     @Builder.Default

@@ -103,7 +103,11 @@ class RevenueServiceTest {
 
         CreateRevenueRequest request = CreateRevenueRequest.builder()
                 .customerName("Trần Văn B")
+                .productName("Cà phê Robusta")
+                .quantity(2)
+                .unitPrice(new BigDecimal("250000"))
                 .amount(new BigDecimal("500000"))
+                .isRetailCustomer(false)
                 .paymentMethod("TIEN_MAT")
                 .paymentStatus("DA_THU")
                 .build();
@@ -119,8 +123,13 @@ class RevenueServiceTest {
         assertNotNull(result);
         assertEquals(10L, result.getId());
         assertEquals("Trần Văn B", result.getCustomerName());
+        assertEquals("Cà phê Robusta", result.getProductName());
+        assertEquals(2, result.getQuantity());
+        assertEquals(new BigDecimal("250000"), result.getUnitPrice());
+        assertEquals("250.000", result.getUnitPriceFormatted());
         assertEquals(new BigDecimal("500000"), result.getAmount());
         assertEquals("500.000", result.getAmountFormatted());
+        assertFalse(result.getIsRetailCustomer());
         assertTrue(result.getIsPaid());
     }
 
