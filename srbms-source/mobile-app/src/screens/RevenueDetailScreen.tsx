@@ -15,8 +15,8 @@ import {
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
-import { revenueApi } from '../api/revenueApi';
-import { RevenueSummary, RevenueItem, CreateRevenuePayload } from '../types/revenue';
+import { revenueApi, productCatalogService, DEFAULT_PRODUCTS } from '../api/revenueApi';
+import { RevenueSummary, RevenueItem, CreateRevenuePayload, ProductCatalogItem } from '../types/revenue';
 
 interface RevenueDetailScreenProps {
   onBack: () => void;
@@ -34,16 +34,26 @@ export const RevenueDetailScreen: React.FC<RevenueDetailScreenProps> = ({ onBack
   // Modals
   const [showPeriodModal, setShowPeriodModal] = useState<boolean>(false);
   const [showCreateModal, setShowCreateModal] = useState<boolean>(false);
+  const [showCatalogModal, setShowCatalogModal] = useState<boolean>(false);
   const [selectedItem, setSelectedItem] = useState<RevenueItem | null>(null);
   const [showActionModal, setShowActionModal] = useState<boolean>(false);
 
-  // Form state for creating new revenue entry
+  // Danh mục mặt hàng khởi tạo
+  const [catalog, setCatalog] = useState<ProductCatalogItem[]>(DEFAULT_PRODUCTS);
+  const [selectedProductId, setSelectedProductId] = useState<string>('');
+  const [catalogSearch, setCatalogSearch] = useState<string>('');
+
+  // Form state cho việc tạo mới đơn trong doanh thu
+  const [formIsRetailCustomer, setFormIsRetailCustomer] = useState<boolean>(false);
   const [formCustomerName, setFormCustomerName] = useState<string>('');
-  const [formAmount, setFormAmount] = useState<string>('');
+  const [formProductName, setFormProductName] = useState<string>('');
+  const [formQuantity, setFormQuantity] = useState<number>(1);
+  const [formUnitPrice, setFormUnitPrice] = useState<string>('');
   const [formDate, setFormDate] = useState<string>('');
   const [formPaymentMethod, setFormPaymentMethod] = useState<'TIEN_MAT' | 'CHUYEN_KHOAN'>('TIEN_MAT');
   const [formPaymentStatus, setFormPaymentStatus] = useState<'DA_THU' | 'CHUA_THU'>('DA_THU');
   const [formNote, setFormNote] = useState<string>('');
+  const [saveToCatalog, setSaveToCatalog] = useState<boolean>(false);
   const [submitting, setSubmitting] = useState<boolean>(false);
 
   // Fetch revenue summary from Backend API
@@ -68,39 +78,161 @@ export const RevenueDetailScreen: React.FC<RevenueDetailScreenProps> = ({ onBack
 
   useEffect(() => {
     loadRevenueData();
+    // Load catalog ban đầu
+    productCatalogService.getCatalog().then((cat) => setCatalog(cat)).catch(() => {});
   }, [loadRevenueData]);
 
-  // Đặt lại form khi mở modal tạo mới
-  const handleOpenCreateModal = () => {
+  // STT tự động nhảy đến số tiếp theo
+  const nextSttNumber = (summaryData?.items?.length || 0) + 1;
+  const nextSttFormatted = nextSttNumber.toString().padStart(2, '0');
+
+  // Đơn giá và thành tiền tự động tính real-time
+  const parsedUnitPrice = parseFloat(formUnitPrice.replace(/[^0-9]/g, '')) || 0;
+  const currentQuantity = formQuantity > 0 ? formQuantity : 1;
+  const computedTotalAmount = currentQuantity * parsedUnitPrice;
+  const computedTotalFormatted = computedTotalAmount.toLocaleString('vi-VN');
+
+  // Đặt lại form khi mở modal tạo mới đơn
+  const handleOpenCreateModal = async () => {
     const today = new Date();
     const formattedToday = `${today.getDate().toString().padStart(2, '0')}/${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getFullYear()}`;
+    
+    try {
+      const freshCatalog = await productCatalogService.getCatalog();
+      setCatalog(freshCatalog);
+    } catch {}
+
+    setFormIsRetailCustomer(false);
     setFormCustomerName('');
-    setFormAmount('');
+    setFormProductName('');
+    setSelectedProductId('');
+    setFormQuantity(1);
+    setFormUnitPrice('');
     setFormDate(formattedToday);
     setFormPaymentMethod('TIEN_MAT');
     setFormPaymentStatus('DA_THU');
     setFormNote('');
+    setSaveToCatalog(false);
     setShowCreateModal(true);
   };
 
-  // Submit form tạo mới
+  // Toggle checkbox "Khách lẻ"
+  const handleToggleRetailCustomer = (checked: boolean) => {
+    setFormIsRetailCustomer(checked);
+    if (checked) {
+      setFormCustomerName('Khách lẻ');
+    } else {
+      if (formCustomerName === 'Khách lẻ') {
+        setFormCustomerName('');
+      }
+    }
+  };
+
+  // Khi người dùng gõ tay tên khách hàng
+  const handleCustomerNameChange = (text: string) => {
+    setFormCustomerName(text);
+    if (text.trim().toLowerCase() === 'khách lẻ') {
+      setFormIsRetailCustomer(true);
+    } else if (formIsRetailCustomer) {
+      setFormIsRetailCustomer(false);
+    }
+  };
+
+  // Chọn mặt hàng khởi tạo trong danh mục mẫu (ĐƠN GIÁ TỰ ĐỘNG NHẢY THEO ID/TÊN MẶT HÀNG)
+  const handleSelectProduct = (prod: ProductCatalogItem) => {
+    setSelectedProductId(prod.id);
+    setFormProductName(prod.name);
+    setFormUnitPrice(prod.price.toLocaleString('vi-VN'));
+    setShowCatalogModal(false);
+  };
+
+  // Người dùng nhập tay tên hàng: nếu khớp với mặt hàng đã lưu thì đơn giá tự động nhảy
+  const handleProductNameChange = (text: string) => {
+    setFormProductName(text);
+    const trimmed = text.trim().toLowerCase();
+    const match = catalog.find(
+      (p) => p.name.trim().toLowerCase() === trimmed || p.id.trim().toLowerCase() === trimmed
+    );
+    if (match) {
+      setSelectedProductId(match.id);
+      setFormUnitPrice(match.price.toLocaleString('vi-VN'));
+    } else {
+      setSelectedProductId('');
+    }
+  };
+
+  // Tăng số lượng (mũi tên lên ▲)
+  const handleQuantityIncrease = () => {
+    setFormQuantity((prev) => (prev > 0 ? prev + 1 : 1));
+  };
+
+  // Giảm số lượng (mũi tên xuống ▼)
+  const handleQuantityDecrease = () => {
+    setFormQuantity((prev) => Math.max(1, prev - 1));
+  };
+
+  // Nhập số lượng từ bàn phím
+  const handleQuantityChange = (text: string) => {
+    const clean = text.replace(/[^0-9]/g, '');
+    if (!clean) {
+      setFormQuantity(1);
+    } else {
+      const val = parseInt(clean, 10);
+      setFormQuantity(val > 0 ? val : 1);
+    }
+  };
+
+  // Nhập đơn giá
+  const handleUnitPriceChange = (text: string) => {
+    const clean = text.replace(/[^0-9]/g, '');
+    if (clean) {
+      setFormUnitPrice(Number(clean).toLocaleString('vi-VN'));
+    } else {
+      setFormUnitPrice('');
+    }
+  };
+
+  // Submit form tạo mới đơn hàng trong doanh thu
   const handleCreateSubmit = async () => {
     if (!formCustomerName.trim()) {
-      Alert.alert('Lỗi nhập liệu', 'Vui lòng điền tên người mua');
+      Alert.alert('Lỗi nhập liệu', 'Vui lòng điền tên khách hàng hoặc tick chọn "Khách lẻ"');
       return;
     }
 
-    const rawAmount = parseFloat(formAmount.replace(/[^0-9]/g, ''));
-    if (isNaN(rawAmount) || rawAmount <= 0) {
-      Alert.alert('Lỗi nhập liệu', 'Vui lòng nhập số tiền hợp lệ (> 0)');
+    if (!formProductName.trim()) {
+      Alert.alert('Lỗi nhập liệu', 'Vui lòng nhập tên mặt hàng');
+      return;
+    }
+
+    if (formQuantity <= 0) {
+      Alert.alert('Lỗi nhập liệu', 'Số lượng phải lớn hơn 0');
+      return;
+    }
+
+    if (parsedUnitPrice <= 0) {
+      Alert.alert('Lỗi nhập liệu', 'Vui lòng nhập đơn giá hợp lệ (> 0)');
       return;
     }
 
     setSubmitting(true);
     try {
+      // Nếu user muốn lưu mặt hàng này vào danh mục khởi tạo
+      if (saveToCatalog || !selectedProductId) {
+        const nextId = `SP${(catalog.length + 1).toString().padStart(2, '0')}`;
+        await productCatalogService.addOrUpdateProduct({
+          id: selectedProductId || nextId,
+          name: formProductName.trim(),
+          price: parsedUnitPrice,
+        });
+      }
+
       const payload: CreateRevenuePayload = {
         customerName: formCustomerName.trim(),
-        amount: rawAmount,
+        productName: formProductName.trim(),
+        quantity: formQuantity,
+        unitPrice: parsedUnitPrice,
+        amount: computedTotalAmount,
+        isRetailCustomer: formIsRetailCustomer,
         paymentMethod: formPaymentMethod,
         paymentStatus: formPaymentStatus,
         note: formNote.trim() || undefined,
@@ -108,7 +240,10 @@ export const RevenueDetailScreen: React.FC<RevenueDetailScreenProps> = ({ onBack
 
       await revenueApi.createRevenue(payload);
       setShowCreateModal(false);
-      Alert.alert('Thành công', 'Đã ghi nhận giao dịch doanh thu mới!');
+      Alert.alert(
+        'Thành công',
+        `Đã tạo mới đơn bán hàng STT ${nextSttFormatted} cho "${formCustomerName.trim()}"!\nTổng tiền thanh toán: ${computedTotalFormatted} ₫`
+      );
       loadRevenueData(true);
     } catch (error: any) {
       Alert.alert('Lỗi', error.message || 'Không thể lưu giao dịch mới.');
@@ -360,11 +495,20 @@ export const RevenueDetailScreen: React.FC<RevenueDetailScreenProps> = ({ onBack
                       <View style={[styles.cell, styles.colCustomer]}>
                         <Text
                           style={[styles.cellCustomerText, { color: rowTextColor }]}
-                          numberOfLines={2}
+                          numberOfLines={1}
                           ellipsizeMode="tail"
                         >
                           {item.customerName}
                         </Text>
+                        {item.productName ? (
+                          <Text
+                            style={[styles.cellProductSubText, { color: rowTextColor }]}
+                            numberOfLines={1}
+                            ellipsizeMode="tail"
+                          >
+                            {item.productName}{item.quantity ? ` (${item.quantity})` : ''}
+                          </Text>
+                        ) : null}
                       </View>
 
                       {/* Cột Số tiền: cùng màu toàn dòng */}
@@ -570,7 +714,7 @@ export const RevenueDetailScreen: React.FC<RevenueDetailScreenProps> = ({ onBack
       </Modal>
 
       {/* ========================================================= */}
-      {/* MODAL 2: TẠO GIAO DỊCH / KHOẢN THU MỚI (+ Tạo mới) */}
+      {/* MODAL 2: TẠO MỚI ĐƠN HÀNG DOANH THU CHI TIẾT */}
       {/* ========================================================= */}
       <Modal
         visible={showCreateModal}
@@ -580,49 +724,227 @@ export const RevenueDetailScreen: React.FC<RevenueDetailScreenProps> = ({ onBack
       >
         <View style={styles.modalOverlay}>
           <View style={styles.createModalCard}>
+            {/* Header Modal */}
             <View style={styles.modalHeaderRow}>
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
                 <View style={styles.createIconBadge}>
-                  <Ionicons name="add" size={20} color="#047857" />
+                  <Ionicons name="cart" size={18} color="#047857" />
                 </View>
-                <Text style={styles.modalTitle}>Thêm doanh thu mới</Text>
+                <View>
+                  <Text style={styles.modalTitle}>Tạo mới đơn bán hàng</Text>
+                  <Text style={styles.modalSubTitle}>Ghi nhận chi tiết đơn doanh thu</Text>
+                </View>
               </View>
-              <TouchableOpacity onPress={() => setShowCreateModal(false)}>
+
+              {/* Huy hiệu STT tự nhảy đến số tiếp theo */}
+              <View style={styles.sttBadgeContainer}>
+                <Text style={styles.sttBadgeLabel}>STT ĐƠN</Text>
+                <Text style={styles.sttBadgeNumber}>{nextSttFormatted}</Text>
+              </View>
+
+              <TouchableOpacity
+                onPress={() => setShowCreateModal(false)}
+                style={{ marginLeft: 8, padding: 4 }}
+              >
                 <Ionicons name="close" size={24} color="#64748B" />
               </TouchableOpacity>
             </View>
 
-            <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 460 }}>
-              {/* Tên người mua */}
-              <Text style={styles.formLabel}>Tên người mua *</Text>
+            <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 520 }}>
+              {/* 1. TÊN KHÁCH HÀNG & Ô TICK "KHÁCH LẺ" */}
+              <View style={styles.fieldHeaderRow}>
+                <Text style={styles.formLabel}>Tên khách hàng *</Text>
+                <TouchableOpacity
+                  style={[
+                    styles.retailCheckboxContainer,
+                    formIsRetailCustomer && styles.retailCheckboxContainerActive,
+                  ]}
+                  onPress={() => handleToggleRetailCustomer(!formIsRetailCustomer)}
+                  activeOpacity={0.7}
+                >
+                  <View
+                    style={[
+                      styles.checkboxBox,
+                      formIsRetailCustomer && styles.checkboxBoxActive,
+                    ]}
+                  >
+                    {formIsRetailCustomer && (
+                      <Ionicons name="checkmark" size={14} color="#FFFFFF" />
+                    )}
+                  </View>
+                  <Text
+                    style={[
+                      styles.retailCheckboxLabel,
+                      formIsRetailCustomer && styles.retailCheckboxLabelActive,
+                    ]}
+                  >
+                    Khách lẻ
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.inputWithIconContainer}>
+                <Ionicons
+                  name="person-outline"
+                  size={18}
+                  color={formIsRetailCustomer ? '#059669' : '#64748B'}
+                  style={styles.inputLeftIcon}
+                />
+                <TextInput
+                  style={[
+                    styles.formInputWithIcon,
+                    formIsRetailCustomer && styles.formInputRetailActive,
+                  ]}
+                  placeholder="Nhập họ tên khách hàng (hoặc tick Khách lẻ)"
+                  placeholderTextColor="#94A3B8"
+                  value={formCustomerName}
+                  onChangeText={handleCustomerNameChange}
+                  editable={!formIsRetailCustomer}
+                />
+                {formIsRetailCustomer && (
+                  <View style={styles.retailTagBadge}>
+                    <Text style={styles.retailTagBadgeText}>Đã tick Khách lẻ</Text>
+                  </View>
+                )}
+              </View>
+
+              {/* 2. TÊN HÀNG & DANH MỤC MẶT HÀNG KHỞI TẠO (ĐƠN GIÁ TỰ NHẢY) */}
+              <View style={styles.fieldHeaderRow}>
+                <Text style={styles.formLabel}>Tên hàng (User nhập tay) *</Text>
+                <TouchableOpacity
+                  style={styles.catalogLinkBtn}
+                  onPress={() => setShowCatalogModal(true)}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="grid-outline" size={14} color="#0284C7" />
+                  <Text style={styles.catalogLinkText}>Kho mặt hàng ({catalog.length})</Text>
+                </TouchableOpacity>
+              </View>
+
               <TextInput
                 style={styles.formInput}
-                placeholder="Ví dụ: Nguyễn Văn A"
+                placeholder="Nhập tên mặt hàng (VD: Cà phê, Nước ngọt, Gạo...)"
                 placeholderTextColor="#94A3B8"
-                value={formCustomerName}
-                onChangeText={setFormCustomerName}
+                value={formProductName}
+                onChangeText={handleProductNameChange}
               />
 
-              {/* Số tiền */}
-              <Text style={styles.formLabel}>Số tiền (VNĐ) *</Text>
-              <TextInput
-                style={styles.formInput}
-                placeholder="Ví dụ: 1000000"
-                placeholderTextColor="#94A3B8"
-                keyboardType="numeric"
-                value={formAmount}
-                onChangeText={(text) => {
-                  const num = text.replace(/[^0-9]/g, '');
-                  if (num) {
-                    setFormAmount(Number(num).toLocaleString('vi-VN'));
-                  } else {
-                    setFormAmount('');
-                  }
-                }}
-              />
+              {/* Thanh gợi ý nhanh các mặt hàng đã khởi tạo */}
+              <View style={styles.presetCatalogSection}>
+                <Text style={styles.presetSectionLabel}>
+                  Chọn mẫu mặt hàng đã khởi tạo (Đơn giá tự động nhảy):
+                </Text>
+                <ScrollView
+                  horizontal={true}
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.presetChipsScroll}
+                >
+                  {catalog.slice(0, 8).map((prod) => {
+                    const isSelected =
+                      selectedProductId === prod.id ||
+                      formProductName.trim().toLowerCase() === prod.name.trim().toLowerCase();
+                    return (
+                      <TouchableOpacity
+                        key={prod.id}
+                        style={[
+                          styles.presetChip,
+                          isSelected && styles.presetChipActive,
+                        ]}
+                        onPress={() => handleSelectProduct(prod)}
+                        activeOpacity={0.7}
+                      >
+                        <Text
+                          style={[
+                            styles.presetChipText,
+                            isSelected && styles.presetChipTextActive,
+                          ]}
+                        >
+                          <Text style={{ fontWeight: '700' }}>[{prod.id}]</Text> {prod.name}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.presetChipPrice,
+                            isSelected && styles.presetChipPriceActive,
+                          ]}
+                        >
+                          {prod.price.toLocaleString('vi-VN')} ₫
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+              </View>
 
-              {/* Hình thức thanh toán */}
-              <Text style={styles.formLabel}>Hình thức thu tiền</Text>
+              {/* 3. SỐ LƯỢNG & ĐƠN GIÁ (2 CỘT SONG SONG) */}
+              <View style={styles.formRowTwoCols}>
+                {/* Cột Số lượng (Stepper mũi tên lên xuống) */}
+                <View style={styles.formCol}>
+                  <Text style={styles.formLabel}>Số lượng</Text>
+                  <View style={styles.stepperContainer}>
+                    <TouchableOpacity
+                      style={styles.stepperBtn}
+                      onPress={handleQuantityDecrease}
+                      activeOpacity={0.6}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      <Ionicons name="chevron-down" size={18} color="#0F172A" />
+                    </TouchableOpacity>
+
+                    <TextInput
+                      style={styles.stepperInput}
+                      keyboardType="numeric"
+                      value={formQuantity.toString()}
+                      onChangeText={handleQuantityChange}
+                      textAlign="center"
+                    />
+
+                    <TouchableOpacity
+                      style={styles.stepperBtn}
+                      onPress={handleQuantityIncrease}
+                      activeOpacity={0.6}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      <Ionicons name="chevron-up" size={18} color="#0F172A" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                {/* Cột Đơn giá (Tự nhảy theo ID/tên mặt hàng) */}
+                <View style={styles.formCol}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <Text style={styles.formLabel}>Đơn giá (₫) *</Text>
+                    {selectedProductId ? (
+                      <Text style={styles.autoPriceHint}>Tự nhảy ✓</Text>
+                    ) : null}
+                  </View>
+                  <TextInput
+                    style={[
+                      styles.formInput,
+                      selectedProductId ? styles.formInputAutoPrice : null,
+                    ]}
+                    placeholder="VD: 25.000"
+                    placeholderTextColor="#94A3B8"
+                    keyboardType="numeric"
+                    value={formUnitPrice}
+                    onChangeText={handleUnitPriceChange}
+                  />
+                </View>
+              </View>
+
+              {/* 4. THÀNH TIỀN (Tự động tính: Số lượng x Đơn giá) */}
+              <View style={styles.lineTotalCard}>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Ionicons name="calculator-outline" size={18} color="#047857" style={{ marginRight: 6 }} />
+                  <Text style={styles.lineTotalLabel}>Thành tiền:</Text>
+                </View>
+                <Text style={styles.lineTotalFormula}>
+                  {currentQuantity} × {parsedUnitPrice > 0 ? parsedUnitPrice.toLocaleString('vi-VN') : '0'} ={' '}
+                  <Text style={styles.lineTotalHighlight}>{computedTotalFormatted} ₫</Text>
+                </Text>
+              </View>
+
+              {/* 5. TIỀN MẶT / CHUYỂN KHOẢN (CÓ THỂ TÍCH VÀO 1 TRONG 2) */}
+              <Text style={styles.formLabel}>Hình thức thanh toán (Tích chọn 1 trong 2):</Text>
               <View style={styles.paymentMethodRow}>
                 <TouchableOpacity
                   style={[
@@ -630,11 +952,21 @@ export const RevenueDetailScreen: React.FC<RevenueDetailScreenProps> = ({ onBack
                     formPaymentMethod === 'TIEN_MAT' && styles.methodBtnActive,
                   ]}
                   onPress={() => setFormPaymentMethod('TIEN_MAT')}
+                  activeOpacity={0.7}
                 >
+                  <View
+                    style={[
+                      styles.radioCircle,
+                      formPaymentMethod === 'TIEN_MAT' && styles.radioCircleActive,
+                    ]}
+                  >
+                    {formPaymentMethod === 'TIEN_MAT' && <View style={styles.radioInner} />}
+                  </View>
                   <Ionicons
                     name="cash-outline"
                     size={18}
                     color={formPaymentMethod === 'TIEN_MAT' ? '#047857' : '#64748B'}
+                    style={{ marginLeft: 6 }}
                   />
                   <Text
                     style={[
@@ -652,11 +984,21 @@ export const RevenueDetailScreen: React.FC<RevenueDetailScreenProps> = ({ onBack
                     formPaymentMethod === 'CHUYEN_KHOAN' && styles.methodBtnActive,
                   ]}
                   onPress={() => setFormPaymentMethod('CHUYEN_KHOAN')}
+                  activeOpacity={0.7}
                 >
+                  <View
+                    style={[
+                      styles.radioCircle,
+                      formPaymentMethod === 'CHUYEN_KHOAN' && styles.radioCircleActive,
+                    ]}
+                  >
+                    {formPaymentMethod === 'CHUYEN_KHOAN' && <View style={styles.radioInner} />}
+                  </View>
                   <Ionicons
                     name="card-outline"
                     size={18}
                     color={formPaymentMethod === 'CHUYEN_KHOAN' ? '#047857' : '#64748B'}
+                    style={{ marginLeft: 6 }}
                   />
                   <Text
                     style={[
@@ -669,8 +1011,8 @@ export const RevenueDetailScreen: React.FC<RevenueDetailScreenProps> = ({ onBack
                 </TouchableOpacity>
               </View>
 
-              {/* Trạng thái thu tiền */}
-              <Text style={styles.formLabel}>Trạng thái thu tiền</Text>
+              {/* 6. TRẠNG THÁI THU TIỀN */}
+              <Text style={styles.formLabel}>Trạng thái thu tiền:</Text>
               <View style={styles.paymentMethodRow}>
                 <TouchableOpacity
                   style={[
@@ -678,6 +1020,7 @@ export const RevenueDetailScreen: React.FC<RevenueDetailScreenProps> = ({ onBack
                     formPaymentStatus === 'DA_THU' && styles.statusBtnPaidActive,
                   ]}
                   onPress={() => setFormPaymentStatus('DA_THU')}
+                  activeOpacity={0.7}
                 >
                   <Ionicons
                     name="checkmark-circle"
@@ -700,6 +1043,7 @@ export const RevenueDetailScreen: React.FC<RevenueDetailScreenProps> = ({ onBack
                     formPaymentStatus === 'CHUA_THU' && styles.statusBtnUnpaidActive,
                   ]}
                   onPress={() => setFormPaymentStatus('CHUA_THU')}
+                  activeOpacity={0.7}
                 >
                   <Ionicons
                     name="time-outline"
@@ -717,10 +1061,76 @@ export const RevenueDetailScreen: React.FC<RevenueDetailScreenProps> = ({ onBack
                 </TouchableOpacity>
               </View>
 
+              {/* 7. BẢNG XEM TRƯỚC ĐƠN HÀNG (MINI ORDER TABLE PREVIEW) */}
+              <View style={styles.orderPreviewBox}>
+                <View style={styles.previewBoxHeader}>
+                  <Ionicons name="eye-outline" size={15} color="#0369A1" />
+                  <Text style={styles.previewBoxTitle}>Xem trước bảng đơn hàng mới:</Text>
+                </View>
+
+                <View style={styles.miniTable}>
+                  <View style={styles.miniTableHeader}>
+                    <Text style={[styles.miniHeaderCell, { width: 32 }]}>STT</Text>
+                    <Text style={[styles.miniHeaderCell, { flex: 1.2 }]}>Khách hàng</Text>
+                    <Text style={[styles.miniHeaderCell, { flex: 1.3 }]}>Tên hàng</Text>
+                    <Text style={[styles.miniHeaderCell, { width: 28 }]}>SL</Text>
+                    <Text style={[styles.miniHeaderCell, { flex: 1.1 }]}>Đơn giá</Text>
+                    <Text style={[styles.miniHeaderCell, { flex: 1.2 }]}>Thành tiền</Text>
+                    <Text style={[styles.miniHeaderCell, { width: 44 }]}>HTTT</Text>
+                  </View>
+
+                  <View style={styles.miniTableRow}>
+                    <Text style={[styles.miniDataCell, { width: 32, fontWeight: '700', color: '#059669' }]}>
+                      {nextSttFormatted}
+                    </Text>
+                    <Text style={[styles.miniDataCell, { flex: 1.2, fontWeight: '600' }]} numberOfLines={1}>
+                      {formCustomerName || '-'}
+                    </Text>
+                    <Text style={[styles.miniDataCell, { flex: 1.3 }]} numberOfLines={1}>
+                      {formProductName || '-'}
+                    </Text>
+                    <Text style={[styles.miniDataCell, { width: 28, fontWeight: '700' }]}>
+                      {formQuantity}
+                    </Text>
+                    <Text style={[styles.miniDataCell, { flex: 1.1 }]}>
+                      {formUnitPrice || '0'}
+                    </Text>
+                    <Text style={[styles.miniDataCell, { flex: 1.2, fontWeight: '700', color: '#047857' }]}>
+                      {computedTotalFormatted}
+                    </Text>
+                    <Text style={[styles.miniDataCell, { width: 44, fontSize: 10 }]}>
+                      {formPaymentMethod === 'TIEN_MAT' ? 'Tiền mặt' : 'CK'}
+                    </Text>
+                  </View>
+                </View>
+
+                {/* TỔNG TIỀN THANH TOÁN LỚN NỔI BẬT */}
+                <View style={styles.grandTotalBanner}>
+                  <Text style={styles.grandTotalLabel}>TỔNG TIỀN THANH TOÁN:</Text>
+                  <Text style={styles.grandTotalValue}>{computedTotalFormatted} ₫</Text>
+                </View>
+              </View>
+
+              {/* Tùy chọn lưu mặt hàng vào danh mục */}
+              {!selectedProductId && formProductName.trim().length > 0 && parsedUnitPrice > 0 && (
+                <TouchableOpacity
+                  style={styles.saveCatalogCheckRow}
+                  onPress={() => setSaveToCatalog(!saveToCatalog)}
+                  activeOpacity={0.7}
+                >
+                  <View style={[styles.checkboxBox, saveToCatalog && styles.checkboxBoxActive]}>
+                    {saveToCatalog && <Ionicons name="checkmark" size={13} color="#FFFFFF" />}
+                  </View>
+                  <Text style={styles.saveCatalogCheckText}>
+                    Lưu mặt hàng "{formProductName.trim()}" kèm đơn giá này vào danh mục khởi tạo
+                  </Text>
+                </TouchableOpacity>
+              )}
+
               {/* Ghi chú */}
               <Text style={styles.formLabel}>Ghi chú (Tùy chọn)</Text>
               <TextInput
-                style={[styles.formInput, { height: 72, textAlignVertical: 'top' }]}
+                style={[styles.formInput, { height: 60, textAlignVertical: 'top' }]}
                 placeholder="Ghi chú thêm về đơn hàng hoặc mặt hàng..."
                 placeholderTextColor="#94A3B8"
                 multiline={true}
@@ -748,7 +1158,7 @@ export const RevenueDetailScreen: React.FC<RevenueDetailScreenProps> = ({ onBack
                 ) : (
                   <>
                     <Ionicons name="checkmark" size={18} color="#FFFFFF" style={{ marginRight: 6 }} />
-                    <Text style={styles.submitBtnText}>Lưu doanh thu</Text>
+                    <Text style={styles.submitBtnText}>Lưu đơn hàng ({computedTotalFormatted} ₫)</Text>
                   </>
                 )}
               </TouchableOpacity>
@@ -775,17 +1185,54 @@ export const RevenueDetailScreen: React.FC<RevenueDetailScreenProps> = ({ onBack
             <Text style={styles.actionModalTitle}>Thao tác khoản doanh thu</Text>
             {selectedItem && (
               <View style={styles.actionItemInfo}>
-                <Text style={styles.actionItemName}>{selectedItem.customerName}</Text>
-                <Text
-                  style={[
-                    styles.actionItemAmount,
-                    selectedItem.isPaid ? { color: '#16A34A' } : { color: '#0F172A' },
-                  ]}
-                >
-                  {selectedItem.amountFormatted} ₫ ({selectedItem.isPaid ? 'Đã thu tiền' : 'Chưa thu tiền'})
-                </Text>
+                <View style={styles.actionDetailRow}>
+                  <Text style={styles.actionDetailLabel}>Khách hàng:</Text>
+                  <Text style={styles.actionItemName}>{selectedItem.customerName}</Text>
+                </View>
+                {selectedItem.productName ? (
+                  <View style={styles.actionDetailRow}>
+                    <Text style={styles.actionDetailLabel}>Mặt hàng:</Text>
+                    <Text style={styles.actionDetailValue}>
+                      {selectedItem.productName} (SL: {selectedItem.quantity || 1})
+                    </Text>
+                  </View>
+                ) : null}
+                {selectedItem.unitPrice ? (
+                  <View style={styles.actionDetailRow}>
+                    <Text style={styles.actionDetailLabel}>Đơn giá:</Text>
+                    <Text style={styles.actionDetailValue}>
+                      {selectedItem.unitPriceFormatted || selectedItem.unitPrice.toLocaleString('vi-VN')} ₫
+                    </Text>
+                  </View>
+                ) : null}
+                <View style={styles.actionDetailRow}>
+                  <Text style={styles.actionDetailLabel}>Tổng thanh toán:</Text>
+                  <Text
+                    style={[
+                      styles.actionItemAmount,
+                      selectedItem.isPaid ? { color: '#16A34A' } : { color: '#0F172A' },
+                    ]}
+                  >
+                    {selectedItem.amountFormatted} ₫
+                  </Text>
+                </View>
+                <View style={styles.actionDetailRow}>
+                  <Text style={styles.actionDetailLabel}>Hình thức:</Text>
+                  <Text style={styles.actionDetailValue}>{selectedItem.paymentMethodLabel}</Text>
+                </View>
+                <View style={styles.actionDetailRow}>
+                  <Text style={styles.actionDetailLabel}>Trạng thái:</Text>
+                  <Text
+                    style={[
+                      styles.actionDetailValue,
+                      { fontWeight: '700', color: selectedItem.isPaid ? '#16A34A' : '#0F172A' },
+                    ]}
+                  >
+                    {selectedItem.isPaid ? 'Đã thu tiền' : 'Chưa thu tiền'}
+                  </Text>
+                </View>
                 <Text style={styles.actionItemDate}>
-                  Ngày: {selectedItem.transactionDateFormatted || selectedItem.transactionDate} • {selectedItem.paymentMethodLabel}
+                  Ngày GD: {selectedItem.transactionDateFormatted || selectedItem.transactionDate}
                 </Text>
               </View>
             )}
@@ -819,6 +1266,82 @@ export const RevenueDetailScreen: React.FC<RevenueDetailScreenProps> = ({ onBack
             <TouchableOpacity
               style={styles.actionCloseBtn}
               onPress={() => setShowActionModal(false)}
+            >
+              <Text style={styles.actionCloseText}>Đóng</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* ========================================================= */}
+      {/* MODAL 4: DANH MỤC MẶT HÀNG KHỞI TẠO (KHO MẶT HÀNG) */}
+      {/* ========================================================= */}
+      <Modal
+        visible={showCatalogModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowCatalogModal(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowCatalogModal(false)}
+        >
+          <View style={styles.catalogModalCard}>
+            <View style={styles.modalHeaderRow}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <View style={styles.catalogIconBadge}>
+                  <Ionicons name="cube-outline" size={18} color="#0284C7" />
+                </View>
+                <Text style={styles.modalTitle}>Danh mục mặt hàng khởi tạo</Text>
+              </View>
+              <TouchableOpacity onPress={() => setShowCatalogModal(false)}>
+                <Ionicons name="close" size={22} color="#64748B" />
+              </TouchableOpacity>
+            </View>
+
+            <TextInput
+              style={styles.catalogSearchInput}
+              placeholder="Tìm kiếm theo mã ID hoặc tên mặt hàng..."
+              placeholderTextColor="#94A3B8"
+              value={catalogSearch}
+              onChangeText={setCatalogSearch}
+            />
+
+            <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 320 }}>
+              {catalog
+                .filter(
+                  (p) =>
+                    p.name.toLowerCase().includes(catalogSearch.toLowerCase()) ||
+                    p.id.toLowerCase().includes(catalogSearch.toLowerCase())
+                )
+                .map((prod) => (
+                  <TouchableOpacity
+                    key={prod.id}
+                    style={styles.catalogItemRow}
+                    onPress={() => handleSelectProduct(prod)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.catalogItemIdBadge}>
+                      <Text style={styles.catalogItemIdText}>{prod.id}</Text>
+                    </View>
+                    <View style={{ flex: 1, marginLeft: 10 }}>
+                      <Text style={styles.catalogItemName}>{prod.name}</Text>
+                      {prod.unit ? (
+                        <Text style={styles.catalogItemUnit}>Đơn vị tính: {prod.unit}</Text>
+                      ) : null}
+                    </View>
+                    <Text style={styles.catalogItemPrice}>
+                      {prod.price.toLocaleString('vi-VN')} ₫
+                    </Text>
+                    <Ionicons name="arrow-forward-circle" size={20} color="#059669" style={{ marginLeft: 8 }} />
+                  </TouchableOpacity>
+                ))}
+            </ScrollView>
+
+            <TouchableOpacity
+              style={styles.actionCloseBtn}
+              onPress={() => setShowCatalogModal(false)}
             >
               <Text style={styles.actionCloseText}>Đóng</Text>
             </TouchableOpacity>
@@ -1452,4 +1975,466 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#64748B',
   },
+  actionDetailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 3,
+  },
+  actionDetailLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#64748B',
+  },
+  actionDetailValue: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#0F172A',
+  },
+
+  // Subtext tên hàng trong bảng chính
+  cellProductSubText: {
+    fontSize: 9,
+    fontStyle: 'italic',
+    marginTop: 1,
+    opacity: 0.85,
+  },
+
+  // Huy hiệu STT tự nhảy
+  sttBadgeContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#ECFDF5',
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+    borderRadius: 8,
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+  },
+  sttBadgeLabel: {
+    fontSize: 8.5,
+    fontWeight: '700',
+    color: '#059669',
+  },
+  sttBadgeNumber: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#047857',
+  },
+  modalSubTitle: {
+    fontSize: 11,
+    color: '#64748B',
+    marginTop: 1,
+  },
+
+  // Field header và Checkbox Khách lẻ
+  fieldHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 10,
+    marginBottom: 6,
+  },
+  retailCheckboxContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+    backgroundColor: '#F1F5F9',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  retailCheckboxContainerActive: {
+    backgroundColor: '#ECFDF5',
+    borderColor: '#A7F3D0',
+  },
+  checkboxBox: {
+    width: 16,
+    height: 16,
+    borderRadius: 4,
+    borderWidth: 1.5,
+    borderColor: '#94A3B8',
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 6,
+  },
+  checkboxBoxActive: {
+    backgroundColor: '#059669',
+    borderColor: '#059669',
+  },
+  retailCheckboxLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#64748B',
+  },
+  retailCheckboxLabelActive: {
+    color: '#047857',
+    fontWeight: '700',
+  },
+
+  // Input có icon
+  inputWithIconContainer: {
+    position: 'relative',
+    justifyContent: 'center',
+  },
+  inputLeftIcon: {
+    position: 'absolute',
+    left: 12,
+    zIndex: 1,
+  },
+  formInputWithIcon: {
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    borderRadius: 10,
+    paddingLeft: 38,
+    paddingRight: 14,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: '#0F172A',
+  },
+  formInputRetailActive: {
+    backgroundColor: '#F0FDF4',
+    borderColor: '#86EFAC',
+    fontWeight: '700',
+    color: '#047857',
+  },
+  retailTagBadge: {
+    position: 'absolute',
+    right: 10,
+    backgroundColor: '#DCFCE7',
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+  },
+  retailTagBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#15803D',
+  },
+
+  // Kho mặt hàng link
+  catalogLinkBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 3,
+    paddingHorizontal: 6,
+  },
+  catalogLinkText: {
+    fontSize: 11.5,
+    fontWeight: '600',
+    color: '#0284C7',
+    marginLeft: 4,
+  },
+
+  // Gợi ý nhanh mặt hàng khởi tạo
+  presetCatalogSection: {
+    marginTop: 6,
+    marginBottom: 6,
+  },
+  presetSectionLabel: {
+    fontSize: 11,
+    fontStyle: 'italic',
+    color: '#64748B',
+    marginBottom: 4,
+  },
+  presetChipsScroll: {
+    flexDirection: 'row',
+    gap: 6,
+    paddingVertical: 2,
+  },
+  presetChip: {
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    backgroundColor: '#F1F5F9',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    alignItems: 'center',
+  },
+  presetChipActive: {
+    backgroundColor: '#ECFDF5',
+    borderColor: '#10B981',
+  },
+  presetChipText: {
+    fontSize: 11,
+    color: '#334155',
+    fontWeight: '500',
+  },
+  presetChipTextActive: {
+    color: '#065F46',
+    fontWeight: '700',
+  },
+  presetChipPrice: {
+    fontSize: 10,
+    color: '#059669',
+    fontWeight: '600',
+    marginTop: 1,
+  },
+  presetChipPriceActive: {
+    color: '#047857',
+    fontWeight: '800',
+  },
+
+  // Hàng 2 cột (Số lượng & Đơn giá)
+  formRowTwoCols: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 4,
+  },
+  formCol: {
+    flex: 1,
+  },
+  autoPriceHint: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#059669',
+    backgroundColor: '#D1FAE5',
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    borderRadius: 4,
+  },
+  formInputAutoPrice: {
+    borderColor: '#10B981',
+    backgroundColor: '#F0FDF4',
+    fontWeight: '700',
+    color: '#065F46',
+  },
+
+  // Stepper số lượng (Mũi tên lên ▲ / xuống ▼)
+  stepperContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    borderRadius: 10,
+    overflow: 'hidden',
+    height: 42,
+  },
+  stepperBtn: {
+    width: 36,
+    height: 42,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#E2E8F0',
+  },
+  stepperInput: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#0F172A',
+    paddingVertical: 6,
+  },
+
+  // Thẻ thành tiền
+  lineTotalCard: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#E6F4EA',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+    marginTop: 10,
+    marginBottom: 4,
+  },
+  lineTotalLabel: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#065F46',
+  },
+  lineTotalFormula: {
+    fontSize: 12.5,
+    color: '#334155',
+  },
+  lineTotalHighlight: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#047857',
+  },
+
+  // Radio button chọn 1 trong 2
+  radioCircle: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    borderWidth: 1.5,
+    borderColor: '#94A3B8',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+  },
+  radioCircleActive: {
+    borderColor: '#059669',
+  },
+  radioInner: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#059669',
+  },
+
+  // Bảng xem trước đơn hàng (Mini table preview)
+  orderPreviewBox: {
+    marginTop: 14,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    padding: 10,
+  },
+  previewBoxHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    gap: 4,
+  },
+  previewBoxTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#0369A1',
+  },
+  miniTable: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    overflow: 'hidden',
+  },
+  miniTableHeader: {
+    flexDirection: 'row',
+    backgroundColor: '#EDF2F7',
+    paddingVertical: 5,
+    paddingHorizontal: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: '#CBD5E1',
+    alignItems: 'center',
+  },
+  miniHeaderCell: {
+    fontSize: 9.5,
+    fontWeight: '700',
+    color: '#334155',
+    textAlign: 'center',
+  },
+  miniTableRow: {
+    flexDirection: 'row',
+    paddingVertical: 7,
+    paddingHorizontal: 4,
+    alignItems: 'center',
+  },
+  miniDataCell: {
+    fontSize: 10.5,
+    color: '#0F172A',
+    textAlign: 'center',
+  },
+  grandTotalBanner: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#DEF7EC',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: '#86EFAC',
+  },
+  grandTotalLabel: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#065F46',
+  },
+  grandTotalValue: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#047857',
+  },
+
+  // Checkbox lưu vào kho mặt hàng
+  saveCatalogCheckRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 10,
+    paddingVertical: 4,
+  },
+  saveCatalogCheckText: {
+    fontSize: 11.5,
+    color: '#475569',
+    flex: 1,
+  },
+
+  // Modal Kho mặt hàng khởi tạo
+  catalogModalCard: {
+    width: '100%',
+    maxWidth: 380,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 18,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 10,
+  },
+  catalogIconBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#E0F2FE',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+  },
+  catalogSearchInput: {
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 13,
+    marginBottom: 10,
+    color: '#0F172A',
+  },
+  catalogItemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  catalogItemIdBadge: {
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  catalogItemIdText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#475569',
+  },
+  catalogItemName: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#0F172A',
+  },
+  catalogItemUnit: {
+    fontSize: 10,
+    color: '#64748B',
+  },
+  catalogItemPrice: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#059669',
+  },
 });
+
