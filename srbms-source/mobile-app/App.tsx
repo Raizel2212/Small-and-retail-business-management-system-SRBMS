@@ -6,14 +6,17 @@ import { WelcomeScreen } from './src/screens/WelcomeScreen';
 import { LoginScreen } from './src/screens/LoginScreen';
 import { RegisterScreen } from './src/screens/RegisterScreen';
 import { HomeScreen } from './src/screens/HomeScreen';
+import { RevenueDetailScreen } from './src/screens/RevenueDetailScreen';
 import { BusinessInfoScreen } from './src/screens/BusinessInfoScreen';
 import { BrandLogo } from './src/components/BrandLogo';
 
-type AuthScreenState = 'welcome' | 'login' | 'register';
+type AuthScreenState = 'welcome' | 'login' | 'register' | 'revenue-preview';
+type AppScreenState = 'home' | 'revenue-detail';
 
 const MainNavigator: React.FC = () => {
   const { user, token, isInitializing } = useAuth();
   const [currentScreen, setCurrentScreen] = useState<AuthScreenState>('welcome');
+  const [appScreen, setAppScreen] = useState<AppScreenState>('home');
   const [prefilledCccd, setPrefilledCccd] = useState<string>('');
 
   // 1. Đang khôi phục session từ AsyncStorage khi khởi động app
@@ -39,8 +42,21 @@ const MainNavigator: React.FC = () => {
       );
     }
 
+    // Xem màn hình Chi tiết Doanh thu
+    if (appScreen === 'revenue-detail') {
+      return (
+        <RevenueDetailScreen
+          onBack={() => setAppScreen('home')}
+        />
+      );
+    }
+
     // Trường hợp 2: Nếu từ lần thứ 2 đăng nhập -> Vào thẳng trang chủ luôn
-    return <HomeScreen />;
+    return (
+      <HomeScreen
+        onNavigateToRevenueDetail={() => setAppScreen('revenue-detail')}
+      />
+    );
   }
 
   // 3. Phân luồng các màn hình xác thực
@@ -68,11 +84,16 @@ const MainNavigator: React.FC = () => {
     );
   }
 
+  if (currentScreen === 'revenue-preview') {
+    return <RevenueDetailScreen onBack={() => setCurrentScreen('welcome')} />;
+  }
+
   // Màn hình mặc định ban đầu: WelcomeScreen (khớp với mockup hình ảnh người dùng cung cấp)
   return (
     <WelcomeScreen
       onNavigateToLogin={() => setCurrentScreen('login')}
       onNavigateToRegister={() => setCurrentScreen('register')}
+      onNavigateToRevenuePreview={() => setCurrentScreen('revenue-preview')}
     />
   );
 };
