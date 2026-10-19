@@ -12,7 +12,7 @@ import lombok.NoArgsConstructor;
 @Builder
 public class LoginRequest {
 
-    @NotBlank(message = "Vui lòng nhập số CCCD")
+    @NotBlank(message = "Vui lòng nhập thông tin đăng nhập (Email, Số điện thoại hoặc số CCCD)")
     private String cccd;
 
     @NotBlank(message = "Vui lòng nhập mật khẩu")

@@ -8,19 +8,25 @@ import com.srbms.exception.AppException;
 import com.srbms.repository.UserRepository;
 import com.srbms.security.JwtTokenProvider;
 import com.srbms.service.AuthService;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-@RequiredArgsConstructor
 public class AuthServiceImpl implements AuthService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider tokenProvider;
+
+    public AuthServiceImpl(UserRepository userRepository,
+                           PasswordEncoder passwordEncoder,
+                           JwtTokenProvider tokenProvider) {
+        this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.tokenProvider = tokenProvider;
+    }
 
     @Override
     @Transactional
@@ -60,8 +66,11 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional(readOnly = true)
     public AuthResponse login(LoginRequest request) {
-        // 1. Kiểm tra tài khoản có tồn tại theo CCCD không
-        User user = userRepository.findByCccd(request.getCccd())
+        String identifier = request.getCccd() != null ? request.getCccd().trim() : "";
+        // 1. Kiểm tra tài khoản có tồn tại theo CCCD, Email hoặc Số điện thoại
+        User user = userRepository.findByCccd(identifier)
+                .or(() -> userRepository.findByEmail(identifier))
+                .or(() -> userRepository.findBySdt(identifier))
                 .orElseThrow(() -> new AppException(HttpStatus.UNAUTHORIZED, "Tài khoản chưa tồn tại hoặc sai số CCCD"));
 
         // 2. Kiểm tra mật khẩu
