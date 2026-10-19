@@ -12,9 +12,10 @@ import {
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
+import { BrandLogo } from '../components/BrandLogo';
 import { CustomInput } from '../components/CustomInput';
 import { CustomButton } from '../components/CustomButton';
-import { BottomCurve } from '../components/BottomCurve';
+import { GoogleIcon } from '../components/GoogleIcon';
 import { ServerConfigModal } from '../components/ServerConfigModal';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -23,7 +24,6 @@ import {
   validateFullName,
   validatePhone,
   validateEmail,
-  validateDateOfBirth,
 } from '../utils/validation';
 
 interface RegisterScreenProps {
@@ -37,13 +37,11 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
 }) => {
   const { register, isLoading, baseUrl, updateBaseUrl } = useAuth();
 
-  // Các trường thông tin DTO khớp với Backend RegisterRequest
+  // Các trường thông tin đăng ký theo đúng thiết kế và API backend
   const [fullName, setFullName] = useState('');
   const [cccd, setCccd] = useState('');
   const [sdt, setSdt] = useState('');
   const [email, setEmail] = useState('');
-  const [username, setUsername] = useState('');
-  const [dateOfBirth, setDateOfBirth] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
@@ -66,9 +64,6 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
     const emailErr = validateEmail(email);
     if (emailErr) newErrors.email = emailErr;
 
-    const dobErr = validateDateOfBirth(dateOfBirth);
-    if (dobErr) newErrors.dateOfBirth = dobErr;
-
     const passErr = validatePassword(password);
     if (passErr) newErrors.password = passErr;
 
@@ -85,20 +80,17 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
 
     try {
       // 2. Gửi request đăng ký lên Backend: POST /api/v1/auth/register
-      const successMessage = await register({
+      await register({
         fullName: fullName.trim(),
         cccd: cccd.trim(),
         sdt: sdt.trim(),
         email: email.trim(),
-        username: username.trim() || undefined,
-        dateOfBirth: dateOfBirth.trim() || undefined,
         password,
       });
 
-      // 3. Chuyển ngay sang màn hình Đăng nhập kèm điền sẵn số CCCD vừa đăng ký
+      // 3. Chuyển ngay sang màn hình Đăng nhập kèm điền sẵn số CCCD / Email
       onNavigateToLogin(cccd.trim());
     } catch (err: any) {
-      // Xử lý khi Backend trả về mã lỗi 409 Conflict (Trùng CCCD, SĐT, Email) hoặc 400
       const message = err.message || 'Đăng ký không thành công. Vui lòng thử lại.';
       setErrors({
         general: message,
@@ -106,28 +98,50 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
     }
   };
 
+  const handleGoogleRegister = () => {
+    Alert.alert(
+      'Đăng ký nhanh bằng Google / Gmail',
+      'Bạn có muốn điền mẫu thông tin bằng tài khoản Gmail?',
+      [
+        {
+          text: 'Điền mẫu Gmail',
+          onPress: () => {
+            setEmail('nguyenvana123@gmail.com');
+            if (!fullName) setFullName('Nguyễn Văn A');
+          },
+        },
+        { text: 'Đóng', style: 'cancel' },
+      ]
+    );
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar style="dark" />
 
-      {/* Header bar */}
+      {/* Top Header Bar */}
       <View style={styles.headerBar}>
-        <TouchableOpacity
-          onPress={onBack}
-          style={styles.backButton}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <Ionicons name="chevron-back" size={26} color="#1E56A0" />
-        </TouchableOpacity>
+        <View style={styles.headerLeftGroup}>
+          {/* Nút quay lại bo tròn nhẹ màu xanh nhạt theo mockup */}
+          <TouchableOpacity
+            onPress={onBack}
+            style={styles.backButtonBadge}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="arrow-back" size={20} color="#1E5E4F" />
+          </TouchableOpacity>
 
-        <Text style={styles.headerTitle}>Đăng ký tài khoản</Text>
+          <BrandLogo size={36} showText={true} />
+        </View>
 
         <TouchableOpacity
           style={styles.serverIconBtn}
           onPress={() => setShowServerConfig(true)}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          activeOpacity={0.7}
         >
-          <Ionicons name="settings-outline" size={20} color="#6B7280" />
+          <Ionicons name="options-outline" size={20} color="#64748B" />
         </TouchableOpacity>
       </View>
 
@@ -140,14 +154,15 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          <View style={styles.introBox}>
-            <Text style={styles.introTitle}>Tạo tài khoản Hộ Kinh Doanh</Text>
-            <Text style={styles.introSubtitle}>
-              Thông tin đăng ký được liên kết và đối soát theo chuẩn định danh điện tử của cơ quan chức năng.
+          {/* Tiêu đề màn hình đăng ký theo mockup */}
+          <View style={styles.titleBox}>
+            <Text style={styles.screenTitle}>Tên Hộ kinh doanh</Text>
+            <Text style={styles.screenSubtitle}>
+              Ví dụ: Hộ kinh doanh Nguyễn Văn A
             </Text>
           </View>
 
-          {/* Lỗi tổng quát từ máy chủ (409 Conflict / 400 Bad Request / 500) */}
+          {/* Banner lỗi từ Backend */}
           {errors.general && (
             <View style={styles.errorBanner}>
               <Ionicons name="alert-circle" size={20} color="#DC2626" />
@@ -158,11 +173,12 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
             </View>
           )}
 
+          {/* Form điền thông tin đăng ký */}
           <View style={styles.formCard}>
             <CustomInput
               label="Họ và tên chủ hộ"
               required
-              placeholder="VD: Nguyễn Văn A"
+              placeholder="Ví dụ: Nguyễn Văn A"
               value={fullName}
               onChangeText={(txt) => {
                 setFullName(txt);
@@ -175,7 +191,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
             <CustomInput
               label="Số Căn cước công dân (CCCD)"
               required
-              placeholder="VD: 079099001122"
+              placeholder="Ví dụ: 059**********689"
               value={cccd}
               onChangeText={(txt) => {
                 setCccd(txt);
@@ -185,13 +201,13 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
               maxLength={12}
               leftIconName="card-outline"
               error={errors.cccd}
-              hint="Đúng 12 chữ số theo quy định"
+              hint="Đúng 12 số trên CCCD"
             />
 
             <CustomInput
               label="Số điện thoại"
               required
-              placeholder="VD: 0901234567"
+              placeholder="Ví dụ: 08*****692"
               value={sdt}
               onChangeText={(txt) => {
                 setSdt(txt);
@@ -206,7 +222,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
             <CustomInput
               label="Địa chỉ Email"
               required
-              placeholder="VD: nguyenvana@gmail.com"
+              placeholder="Ví dụ: nguyenvana123@gmail.com"
               value={email}
               onChangeText={(txt) => {
                 setEmail(txt);
@@ -218,29 +234,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
               error={errors.email}
             />
 
-            <CustomInput
-              label="Tên đăng nhập (Tùy chọn)"
-              placeholder="Mặc định lấy theo số CCCD"
-              value={username}
-              onChangeText={(txt) => setUsername(txt)}
-              autoCapitalize="none"
-              leftIconName="at-outline"
-              error={errors.username}
-            />
-
-            <CustomInput
-              label="Ngày sinh (Tùy chọn)"
-              placeholder="Định dạng: YYYY-MM-DD (VD: 1995-05-20)"
-              value={dateOfBirth}
-              onChangeText={(txt) => {
-                setDateOfBirth(txt);
-                if (errors.dateOfBirth) setErrors({ ...errors, dateOfBirth: undefined });
-              }}
-              leftIconName="calendar-outline"
-              error={errors.dateOfBirth}
-              hint="Năm-Tháng-Ngày (VD: 1990-12-25)"
-            />
-
+            {/* Mật khẩu và Xác nhận mật khẩu để hoàn tất đăng ký tài khoản */}
             <CustomInput
               label="Mật khẩu"
               required
@@ -269,15 +263,37 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
               error={errors.confirmPassword}
             />
 
+            {/* Nút bấm Đăng ký */}
             <CustomButton
-              title="Đăng ký tài khoản"
+              title="Đăng ký"
               variant="primary"
               loading={isLoading}
               onPress={handleRegister}
+              rightIcon={<Ionicons name="arrow-forward" size={18} color="#FFFFFF" />}
               style={styles.submitBtn}
             />
           </View>
 
+          {/* Dải phân cách */}
+          <View style={styles.dividerRow}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>Hoặc tiếp tục với</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
+          {/* Nút đăng ký với Google / Gmail (Loại bỏ Apple theo yêu cầu Android) */}
+          <View style={styles.socialContainer}>
+            <TouchableOpacity
+              style={styles.googleBtn}
+              onPress={handleGoogleRegister}
+              activeOpacity={0.8}
+            >
+              <GoogleIcon size={20} />
+              <Text style={styles.googleBtnText}>Google</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Chuyển hướng sang màn hình Đăng nhập */}
           <View style={styles.footerRow}>
             <Text style={styles.footerText}>Đã có tài khoản? </Text>
             <TouchableOpacity onPress={() => onNavigateToLogin()} activeOpacity={0.7}>
@@ -286,8 +302,6 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-
-      <BottomCurve height={35} color="#4579C7" />
 
       {/* Modal Cấu hình Server */}
       <ServerConfigModal
@@ -309,50 +323,62 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
     paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
   },
-  backButton: {
-    padding: 4,
+  headerLeftGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1E56A0',
+  backButtonBadge: {
+    width: 38,
+    height: 38,
+    borderRadius: 14,
+    backgroundColor: '#EBF6F2',
+    borderWidth: 1,
+    borderColor: '#D4ECE4',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
   },
   serverIconBtn: {
-    padding: 6,
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   keyboardView: {
     flex: 1,
   },
   scrollContent: {
     paddingHorizontal: 24,
-    paddingTop: 16,
-    paddingBottom: 60,
+    paddingTop: 12,
+    paddingBottom: 64,
   },
-  introBox: {
+  titleBox: {
     marginBottom: 20,
   },
-  introTitle: {
-    fontSize: 22,
+  screenTitle: {
+    fontSize: 24,
     fontWeight: '800',
-    color: '#1F2937',
+    color: '#0F172A',
     marginBottom: 4,
+    letterSpacing: -0.3,
   },
-  introSubtitle: {
+  screenSubtitle: {
     fontSize: 13,
-    color: '#6B7280',
-    lineHeight: 18,
+    color: '#64748B',
   },
   errorBanner: {
     flexDirection: 'row',
     backgroundColor: '#FEF2F2',
     borderWidth: 1,
     borderColor: '#F87171',
-    borderRadius: 8,
+    borderRadius: 12,
     padding: 12,
     marginBottom: 16,
     alignItems: 'flex-start',
@@ -376,10 +402,52 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   submitBtn: {
-    marginTop: 12,
-    backgroundColor: '#4579C7',
-    height: 48,
-    borderRadius: 8,
+    marginTop: 10,
+    backgroundColor: '#1E5E4F',
+    height: 52,
+    borderRadius: 14,
+  },
+  dividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 22,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#E2E8F0',
+  },
+  dividerText: {
+    paddingHorizontal: 12,
+    fontSize: 12,
+    color: '#94A3B8',
+    fontWeight: '500',
+  },
+  socialContainer: {
+    width: '100%',
+    alignItems: 'center',
+  },
+  googleBtn: {
+    width: '100%',
+    height: 50,
+    borderRadius: 14,
+    borderWidth: 1.2,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#FFFFFF',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  googleBtnText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#1E293B',
+    marginLeft: 10,
   },
   footerRow: {
     flexDirection: 'row',
@@ -389,12 +457,12 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   footerText: {
-    color: '#6B7280',
+    color: '#64748B',
     fontSize: 14,
   },
   loginLink: {
-    color: '#1E56A0',
+    color: '#1E5E4F',
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '800',
   },
 });

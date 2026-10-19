@@ -8,16 +8,18 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Alert,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
+import { BrandLogo } from '../components/BrandLogo';
 import { CustomInput } from '../components/CustomInput';
 import { CustomButton } from '../components/CustomButton';
-import { BottomCurve } from '../components/BottomCurve';
+import { GoogleIcon } from '../components/GoogleIcon';
 import { ServerConfigModal } from '../components/ServerConfigModal';
 import { ForgotPasswordModal } from '../components/ForgotPasswordModal';
 import { useAuth } from '../context/AuthContext';
-import { validateCccd, validatePassword } from '../utils/validation';
+import { validateLoginIdentifier, validatePassword } from '../utils/validation';
 
 interface LoginScreenProps {
   onBack: () => void;
@@ -32,27 +34,28 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 }) => {
   const { login, isLoading, baseUrl, updateBaseUrl } = useAuth();
 
-  const [cccd, setCccd] = useState(initialCccd);
+  // Cho phép đăng nhập bằng Email, Số điện thoại hoặc số CCCD
+  const [identifier, setIdentifier] = useState(initialCccd);
   const [password, setPassword] = useState('');
 
   useEffect(() => {
     if (initialCccd) {
-      setCccd(initialCccd);
+      setIdentifier(initialCccd);
     }
   }, [initialCccd]);
 
-  const [errors, setErrors] = useState<{ cccd?: string; password?: string; general?: string }>({});
+  const [errors, setErrors] = useState<{ identifier?: string; password?: string; general?: string }>({});
   const [showServerConfig, setShowServerConfig] = useState(false);
   const [showForgotModal, setShowForgotModal] = useState(false);
 
   const handleLogin = async () => {
-    // 1. Validate phía Client
-    const cccdErr = validateCccd(cccd);
+    // 1. Kiểm tra tính hợp lệ phía Client
+    const idErr = validateLoginIdentifier(identifier);
     const passErr = validatePassword(password);
 
-    if (cccdErr || passErr) {
+    if (idErr || passErr) {
       setErrors({
-        cccd: cccdErr || undefined,
+        identifier: idErr || undefined,
         password: passErr || undefined,
       });
       return;
@@ -61,43 +64,60 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     setErrors({});
 
     try {
-      // 2. Bắt API từ Backend: POST /api/v1/auth/login
+      // 2. Gửi request đăng nhập lên Backend
       await login({
-        cccd: cccd.trim(),
+        cccd: identifier.trim(),
         password,
       });
-      // AuthContext sẽ tự động cập nhật user & token, chuyển hướng sang HomeScreen
+      // AuthContext sẽ tự động cập nhật session và chuyển màn hình
     } catch (err: any) {
-      // Trích xuất thông điệp lỗi từ Backend (401, 403, 500, Network error)
-      const message = err.message || 'Đăng nhập thất bại. Vui lòng thử lại.';
+      const message = err.message || 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.';
       setErrors({
         general: message,
       });
     }
   };
 
+  const handleGoogleLogin = () => {
+    Alert.alert(
+      'Đăng nhập Google / Gmail',
+      'Bạn có muốn điền sẵn tài khoản Gmail hoặc tiếp tục với Google?',
+      [
+        {
+          text: 'Điền mẫu Gmail',
+          onPress: () => {
+            setIdentifier('nguyenvana123@gmail.com');
+          },
+        },
+        { text: 'Đóng', style: 'cancel' },
+      ]
+    );
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar style="dark" />
 
-      {/* Thanh điều hướng phía trên */}
+      {/* Top Header Bar */}
       <View style={styles.headerBar}>
         <TouchableOpacity
           onPress={onBack}
           style={styles.backButton}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          activeOpacity={0.7}
         >
-          <Ionicons name="chevron-back" size={26} color="#1E56A0" />
+          <Ionicons name="chevron-back" size={24} color="#1E293B" />
         </TouchableOpacity>
 
-        <Text style={styles.headerTitle}>Đăng nhập</Text>
+        <BrandLogo size={36} showText={true} />
 
         <TouchableOpacity
           style={styles.serverIconBtn}
           onPress={() => setShowServerConfig(true)}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          activeOpacity={0.7}
         >
-          <Ionicons name="settings-outline" size={20} color="#6B7280" />
+          <Ionicons name="options-outline" size={20} color="#64748B" />
         </TouchableOpacity>
       </View>
 
@@ -110,28 +130,28 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Lời chào & Hướng dẫn */}
+          {/* Lời chào đầu trang */}
           <View style={styles.welcomeBox}>
             <Text style={styles.welcomeTitle}>Chào mừng trở lại!</Text>
             <Text style={styles.welcomeSubtitle}>
-              Sử dụng số Căn cước công dân (12 chữ số) và mật khẩu đã đăng ký để truy cập hệ thống.
+              Đăng nhập để tiếp tục đồng hành cùng Hovit.
             </Text>
           </View>
 
-          {/* Hộp thông báo đã đăng ký thành công và tự động điền CCCD */}
+          {/* Banner thông báo đăng ký thành công */}
           {initialCccd ? (
             <View style={styles.successBanner}>
               <Ionicons name="checkmark-circle" size={22} color="#059669" />
               <View style={styles.successBannerContent}>
                 <Text style={styles.successBannerTitle}>Đăng ký tài khoản thành công!</Text>
                 <Text style={styles.successBannerMessage}>
-                  Số CCCD <Text style={{ fontWeight: '700' }}>{initialCccd}</Text> đã được tự động điền sẵn. Vui lòng nhập mật khẩu để đăng nhập.
+                  Tài khoản <Text style={{ fontWeight: '700' }}>{initialCccd}</Text> đã được tự động điền sẵn. Vui lòng nhập mật khẩu để đăng nhập.
                 </Text>
               </View>
             </View>
           ) : null}
 
-          {/* Hộp thông báo lỗi từ Backend nếu có */}
+          {/* Banner thông báo lỗi nếu có */}
           {errors.general && (
             <View style={styles.errorBanner}>
               <Ionicons name="alert-circle" size={20} color="#DC2626" />
@@ -142,27 +162,24 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             </View>
           )}
 
-          {/* Form nhập liệu */}
+          {/* Form đăng nhập */}
           <View style={styles.formCard}>
             <CustomInput
-              label="Số Căn cước công dân (CCCD)"
-              required
-              placeholder="VD: 079099001122"
-              value={cccd}
+              label="Email hoặc số điện thoại"
+              placeholder="Ví dụ: nguyenvana123@gmail.com"
+              value={identifier}
               onChangeText={(txt) => {
-                setCccd(txt);
-                if (errors.cccd) setErrors({ ...errors, cccd: undefined, general: undefined });
+                setIdentifier(txt);
+                if (errors.identifier) setErrors({ ...errors, identifier: undefined, general: undefined });
               }}
-              keyboardType="numeric"
-              maxLength={12}
-              leftIconName="card-outline"
-              error={errors.cccd}
-              hint="Số định danh cá nhân 12 chữ số"
+              autoCapitalize="none"
+              keyboardType="email-address"
+              leftIconName="person-outline"
+              error={errors.identifier}
             />
 
             <CustomInput
               label="Mật khẩu"
-              required
               placeholder="Nhập mật khẩu"
               value={password}
               onChangeText={(txt) => {
@@ -174,6 +191,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
               error={errors.password}
             />
 
+            {/* Quên mật khẩu */}
             <TouchableOpacity
               style={styles.forgotBtn}
               onPress={() => setShowForgotModal(true)}
@@ -182,16 +200,37 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
               <Text style={styles.forgotBtnText}>Quên mật khẩu?</Text>
             </TouchableOpacity>
 
+            {/* Nút Đăng nhập */}
             <CustomButton
               title="Đăng nhập"
               variant="primary"
               loading={isLoading}
               onPress={handleLogin}
+              rightIcon={<Ionicons name="arrow-forward" size={18} color="#FFFFFF" />}
               style={styles.submitBtn}
             />
           </View>
 
-          {/* Điều hướng sang Đăng ký */}
+          {/* Dải phân cách "Hoặc tiếp tục với" */}
+          <View style={styles.dividerRow}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>Hoặc tiếp tục với</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
+          {/* Nút đăng nhập Google / Gmail (Loại bỏ Apple theo yêu cầu người dùng Android) */}
+          <View style={styles.socialContainer}>
+            <TouchableOpacity
+              style={styles.googleBtn}
+              onPress={handleGoogleLogin}
+              activeOpacity={0.8}
+            >
+              <GoogleIcon size={20} />
+              <Text style={styles.googleBtnText}>Google</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Chuyển hướng sang màn hình Đăng ký */}
           <View style={styles.footerRow}>
             <Text style={styles.footerText}>Chưa có tài khoản? </Text>
             <TouchableOpacity onPress={onNavigateToRegister} activeOpacity={0.7}>
@@ -200,8 +239,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-
-      <BottomCurve height={40} color="#4579C7" />
 
       {/* Modal Cấu hình Server & Quên mật khẩu */}
       <ServerConfigModal
@@ -227,52 +264,60 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
     paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
   },
   backButton: {
-    padding: 4,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1E56A0',
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   serverIconBtn: {
-    padding: 6,
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   keyboardView: {
     flex: 1,
   },
   scrollContent: {
     paddingHorizontal: 24,
-    paddingTop: 20,
-    paddingBottom: 60,
+    paddingTop: 16,
+    paddingBottom: 40,
   },
   welcomeBox: {
-    marginBottom: 24,
+    marginBottom: 16,
   },
   welcomeTitle: {
     fontSize: 24,
     fontWeight: '800',
-    color: '#1F2937',
-    marginBottom: 6,
+    color: '#0F172A',
+    marginBottom: 4,
+    letterSpacing: -0.3,
   },
   welcomeSubtitle: {
-    fontSize: 14,
-    color: '#6B7280',
-    lineHeight: 20,
+    fontSize: 13,
+    color: '#64748B',
+    lineHeight: 18,
   },
   successBanner: {
     flexDirection: 'row',
     backgroundColor: '#ECFDF5',
     borderWidth: 1,
     borderColor: '#34D399',
-    borderRadius: 8,
+    borderRadius: 12,
     padding: 12,
-    marginBottom: 18,
+    marginBottom: 14,
     alignItems: 'flex-start',
   },
   successBannerContent: {
@@ -295,9 +340,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#FEF2F2',
     borderWidth: 1,
     borderColor: '#F87171',
-    borderRadius: 8,
+    borderRadius: 12,
     padding: 12,
-    marginBottom: 18,
+    marginBottom: 14,
     alignItems: 'flex-start',
   },
   errorBannerContent: {
@@ -320,34 +365,77 @@ const styles = StyleSheet.create({
   },
   forgotBtn: {
     alignSelf: 'flex-end',
-    marginBottom: 16,
-    marginTop: -4,
+    marginBottom: 12,
+    marginTop: -6,
     paddingVertical: 4,
   },
   forgotBtnText: {
-    color: '#1E56A0',
+    color: '#1E5E4F',
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   submitBtn: {
-    marginTop: 8,
-    backgroundColor: '#4579C7',
+    marginTop: 2,
+    backgroundColor: '#1E5E4F',
+    height: 50,
+    borderRadius: 14,
+  },
+  dividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 18,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#E2E8F0',
+  },
+  dividerText: {
+    paddingHorizontal: 12,
+    fontSize: 12,
+    color: '#94A3B8',
+    fontWeight: '500',
+  },
+  socialContainer: {
+    width: '100%',
+    alignItems: 'center',
+  },
+  googleBtn: {
+    width: '100%',
     height: 48,
-    borderRadius: 8,
+    borderRadius: 14,
+    borderWidth: 1.2,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#FFFFFF',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  googleBtnText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#1E293B',
+    marginLeft: 10,
   },
   footerRow: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 28,
+    marginTop: 18,
+    paddingBottom: 20,
   },
   footerText: {
-    color: '#6B7280',
+    color: '#64748B',
     fontSize: 14,
   },
   registerLink: {
-    color: '#1E56A0',
+    color: '#1E5E4F',
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '800',
   },
 });

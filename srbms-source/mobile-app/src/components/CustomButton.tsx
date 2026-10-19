@@ -19,6 +19,7 @@ interface CustomButtonProps {
   style?: StyleProp<ViewStyle>;
   textStyle?: StyleProp<TextStyle>;
   icon?: React.ReactNode;
+  rightIcon?: React.ReactNode;
 }
 
 export const CustomButton: React.FC<CustomButtonProps> = ({
@@ -30,6 +31,7 @@ export const CustomButton: React.FC<CustomButtonProps> = ({
   style,
   textStyle,
   icon,
+  rightIcon,
 }) => {
   const isOutline = variant === 'outline';
   const isText = variant === 'text';
@@ -37,7 +39,7 @@ export const CustomButton: React.FC<CustomButtonProps> = ({
 
   return (
     <TouchableOpacity
-      activeOpacity={0.82}
+      activeOpacity={0.85}
       onPress={onPress}
       disabled={disabled || loading}
       style={[
@@ -52,7 +54,7 @@ export const CustomButton: React.FC<CustomButtonProps> = ({
       {loading ? (
         <ActivityIndicator
           size="small"
-          color={isOutline || isText ? '#3E73C7' : '#FFFFFF'}
+          color={isOutline || isText ? '#1E5E4F' : '#FFFFFF'}
         />
       ) : (
         <View style={styles.content}>
@@ -68,6 +70,7 @@ export const CustomButton: React.FC<CustomButtonProps> = ({
           >
             {title}
           </Text>
+          {rightIcon && <View style={styles.rightIconWrapper}>{rightIcon}</View>}
         </View>
       )}
     </TouchableOpacity>
@@ -76,18 +79,18 @@ export const CustomButton: React.FC<CustomButtonProps> = ({
 
 const styles = StyleSheet.create({
   base: {
-    height: 48,
-    borderRadius: 8,
-    backgroundColor: '#4579C7', // Màu xanh dương chuẩn theo mockup
+    height: 50,
+    borderRadius: 12,
+    backgroundColor: '#1E5E4F', // Màu xanh thông đậm (Pine Green) theo mockup mới
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 20,
     marginVertical: 6,
     width: '100%',
-    shadowColor: '#1E40AF',
+    shadowColor: '#1E5E4F',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.12,
-    shadowRadius: 3,
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
     elevation: 2,
   },
   content: {
@@ -98,13 +101,16 @@ const styles = StyleSheet.create({
   iconWrapper: {
     marginRight: 8,
   },
+  rightIconWrapper: {
+    marginLeft: 8,
+  },
   secondary: {
-    backgroundColor: '#3B68B0',
+    backgroundColor: '#2E865F',
   },
   outline: {
-    backgroundColor: 'transparent',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1.5,
-    borderColor: '#4579C7',
+    borderColor: '#1E5E4F',
     elevation: 0,
     shadowOpacity: 0,
   },
@@ -112,7 +118,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
     elevation: 0,
     shadowOpacity: 0,
-    height: 38,
+    height: 40,
   },
   disabled: {
     opacity: 0.6,
@@ -120,17 +126,17 @@ const styles = StyleSheet.create({
   text: {
     color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '600',
-    letterSpacing: 0.3,
+    fontWeight: '700',
+    letterSpacing: 0.2,
   },
   outlineText: {
-    color: '#4579C7',
-    fontWeight: '600',
+    color: '#1E5E4F',
+    fontWeight: '700',
   },
   textVariantText: {
-    color: '#3168B5',
+    color: '#1E5E4F',
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   secondaryText: {
     color: '#FFFFFF',

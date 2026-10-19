@@ -25,6 +25,7 @@ export const HomeScreen: React.FC = () => {
   const [activeTab, setActiveTab] = useState<BottomTabType>('home');
   const [showNotificationModal, setShowNotificationModal] = useState(false);
   const [showServerConfig, setShowServerConfig] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [periodFilter, setPeriodFilter] = useState<'month' | 'quarter' | 'year'>('month');
 
   // Search state
@@ -59,20 +60,7 @@ export const HomeScreen: React.FC = () => {
   ];
 
   const handleLogout = () => {
-    Alert.alert(
-      'Xác nhận đăng xuất',
-      'Bạn có chắc chắn muốn đăng xuất khỏi tài khoản?',
-      [
-        { text: 'Hủy', style: 'cancel' },
-        {
-          text: 'Đăng xuất',
-          style: 'destructive',
-          onPress: async () => {
-            await logout();
-          },
-        },
-      ]
-    );
+    setShowLogoutModal(true);
   };
 
   // Render tab "Trang chủ"
@@ -508,9 +496,20 @@ export const HomeScreen: React.FC = () => {
         </View>
       </View>
 
-      <TouchableOpacity style={styles.profileLogoutBtn} onPress={handleLogout}>
-        <Ionicons name="log-out-outline" size={20} color="#DC2626" />
-        <Text style={styles.profileLogoutText}>Đăng xuất khỏi tài khoản</Text>
+      {/* Nút Đăng xuất tài khoản trong Profile */}
+      <TouchableOpacity
+        style={styles.profileLogoutBtn}
+        onPress={handleLogout}
+        activeOpacity={0.8}
+      >
+        <View style={styles.profileLogoutIconBox}>
+          <Ionicons name="log-out-outline" size={20} color="#DC2626" />
+        </View>
+        <View style={styles.profileLogoutTextBox}>
+          <Text style={styles.profileLogoutText}>Đăng xuất khỏi tài khoản</Text>
+          <Text style={styles.profileLogoutSubtext}>Thoát phiên đăng nhập an toàn</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={18} color="#EF4444" />
       </TouchableOpacity>
     </ScrollView>
   );
@@ -565,8 +564,12 @@ export const HomeScreen: React.FC = () => {
           - Bên phải là Icon chuông thông báo
       {/* ======================================================== */}
       <View style={styles.headerBar}>
-        {/* Góc trên cùng bên trái: Tên User */}
-        <View style={styles.headerLeftUser}>
+        {/* Góc trên cùng bên trái: Tên User (Chạm để tới Profile) */}
+        <TouchableOpacity
+          style={styles.headerLeftUser}
+          onPress={() => setActiveTab('profile')}
+          activeOpacity={0.7}
+        >
           <View style={styles.userMiniAvatar}>
             <Text style={styles.userMiniAvatarText}>
               {user?.fullName ? user.fullName.charAt(0).toUpperCase() : 'U'}
@@ -578,7 +581,7 @@ export const HomeScreen: React.FC = () => {
               {user?.fullName || 'Người dùng'}
             </Text>
           </View>
-        </View>
+        </TouchableOpacity>
 
         {/* Ở giữa: Logo của App */}
         <View style={styles.headerCenterLogo}>
@@ -764,6 +767,68 @@ export const HomeScreen: React.FC = () => {
         </TouchableOpacity>
       </Modal>
 
+      {/* Modal Xác nhận Đăng xuất */}
+      <Modal
+        visible={showLogoutModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowLogoutModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.logoutModalBox}>
+            <View style={styles.logoutIconCircle}>
+              <Ionicons name="log-out" size={28} color="#DC2626" />
+            </View>
+            <Text style={styles.logoutModalTitle}>Xác nhận đăng xuất</Text>
+            <Text style={styles.logoutModalDesc}>
+              Bạn có chắc chắn muốn đăng xuất khỏi tài khoản{' '}
+              <Text style={{ fontWeight: '700', color: '#1E293B' }}>{user?.fullName || 'Hộ kinh doanh'}</Text>?
+            </Text>
+
+            <View style={styles.logoutAccountCard}>
+              <View style={styles.logoutAvatarMini}>
+                <Text style={styles.logoutAvatarText}>
+                  {user?.fullName ? user.fullName.charAt(0).toUpperCase() : 'U'}
+                </Text>
+              </View>
+              <View style={{ flex: 1, marginLeft: 10 }}>
+                <Text style={styles.logoutAccountName} numberOfLines={1}>
+                  {user?.fullName || 'Chủ hộ kinh doanh'}
+                </Text>
+                <Text style={styles.logoutAccountCccd}>Số CCCD: {user?.cccd}</Text>
+                {user?.email ? (
+                  <Text style={styles.logoutAccountEmail} numberOfLines={1}>
+                    {user.email}
+                  </Text>
+                ) : null}
+              </View>
+            </View>
+
+            <View style={styles.logoutModalBtnRow}>
+              <TouchableOpacity
+                style={styles.logoutCancelBtn}
+                onPress={() => setShowLogoutModal(false)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.logoutCancelText}>Hủy bỏ</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.logoutConfirmBtn}
+                onPress={async () => {
+                  setShowLogoutModal(false);
+                  await logout();
+                }}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="log-out-outline" size={18} color="#FFFFFF" />
+                <Text style={styles.logoutConfirmText}>Đăng xuất</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       {/* Modal Cấu hình Server */}
       <ServerConfigModal
         visible={showServerConfig}
@@ -855,7 +920,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 16,
-    paddingBottom: 24,
+    paddingBottom: 96,
   },
   businessBadgeCard: {
     backgroundColor: '#FFFFFF',
@@ -1453,19 +1518,155 @@ const styles = StyleSheet.create({
   profileLogoutBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
     backgroundColor: '#FEF2F2',
-    borderWidth: 1,
+    borderWidth: 1.2,
     borderColor: '#FECACA',
-    borderRadius: 12,
-    paddingVertical: 14,
-    gap: 8,
-    marginTop: 8,
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    marginTop: 12,
+    marginBottom: 20,
+    shadowColor: '#DC2626',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 3,
+    elevation: 1,
+  },
+  profileLogoutIconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: '#FEE2E2',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  profileLogoutTextBox: {
+    flex: 1,
+    marginLeft: 12,
   },
   profileLogoutText: {
     color: '#DC2626',
     fontSize: 14,
     fontWeight: '700',
+  },
+  profileLogoutSubtext: {
+    color: '#EF4444',
+    fontSize: 11,
+    marginTop: 2,
+  },
+  logoutModalBox: {
+    width: '100%',
+    maxWidth: 340,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 22,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.18,
+    shadowRadius: 20,
+    elevation: 8,
+  },
+  logoutIconCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#FEE2E2',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  logoutModalTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#0F172A',
+    marginBottom: 6,
+  },
+  logoutModalDesc: {
+    fontSize: 13,
+    color: '#64748B',
+    textAlign: 'center',
+    lineHeight: 19,
+    marginBottom: 14,
+  },
+  logoutAccountCard: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+    padding: 10,
+    marginBottom: 18,
+  },
+  logoutAvatarMini: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#1E56A0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  logoutAvatarText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  logoutAccountName: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#1E293B',
+  },
+  logoutAccountCccd: {
+    fontSize: 11,
+    color: '#64748B',
+    marginTop: 1,
+  },
+  logoutAccountEmail: {
+    fontSize: 11,
+    color: '#1E56A0',
+    marginTop: 1,
+  },
+  logoutModalBtnRow: {
+    flexDirection: 'row',
+    width: '100%',
+    gap: 10,
+  },
+  logoutCancelBtn: {
+    flex: 1,
+    height: 46,
+    borderRadius: 12,
+    backgroundColor: '#F1F5F9',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  logoutCancelText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#64748B',
+  },
+  logoutConfirmBtn: {
+    flex: 1,
+    height: 46,
+    borderRadius: 12,
+    backgroundColor: '#DC2626',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    shadowColor: '#DC2626',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  logoutConfirmText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
   settingActionBtn: {
     flexDirection: 'row',

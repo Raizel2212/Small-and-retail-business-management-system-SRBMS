@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   Alert,
   Platform,
+  Modal,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
@@ -95,6 +96,7 @@ export const BusinessInfoScreen: React.FC<BusinessInfoScreenProps> = ({ onComple
   const [businessName, setBusinessName] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string>('');
+  const [showLogoutModal, setShowLogoutModal] = useState<boolean>(false);
 
   const handleSubmit = async () => {
     setErrorMessage('');
@@ -156,15 +158,11 @@ export const BusinessInfoScreen: React.FC<BusinessInfoScreenProps> = ({ onComple
 
         <TouchableOpacity
           style={styles.logoutBtn}
-          onPress={() => {
-            Alert.alert('Đăng xuất', 'Bạn muốn đăng xuất khỏi tài khoản?', [
-              { text: 'Hủy', style: 'cancel' },
-              { text: 'Đăng xuất', style: 'destructive', onPress: logout },
-            ]);
-          }}
+          onPress={() => setShowLogoutModal(true)}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          activeOpacity={0.7}
         >
-          <Ionicons name="log-out-outline" size={22} color="#6B7280" />
+          <Ionicons name="log-out-outline" size={22} color="#DC2626" />
         </TouchableOpacity>
       </View>
 
@@ -419,6 +417,49 @@ export const BusinessInfoScreen: React.FC<BusinessInfoScreenProps> = ({ onComple
           </Text>
         </View>
       </ScrollView>
+
+      {/* Modal Xác nhận Đăng xuất */}
+      <Modal
+        visible={showLogoutModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowLogoutModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.logoutModalBox}>
+            <View style={styles.logoutIconCircle}>
+              <Ionicons name="log-out" size={28} color="#DC2626" />
+            </View>
+            <Text style={styles.logoutModalTitle}>Xác nhận đăng xuất</Text>
+            <Text style={styles.logoutModalDesc}>
+              Bạn có chắc chắn muốn đăng xuất khỏi tài khoản{' '}
+              <Text style={{ fontWeight: '700', color: '#1E293B' }}>{user?.fullName || 'Hộ kinh doanh'}</Text>?
+            </Text>
+
+            <View style={styles.logoutModalBtnRow}>
+              <TouchableOpacity
+                style={styles.logoutCancelBtn}
+                onPress={() => setShowLogoutModal(false)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.logoutCancelText}>Hủy bỏ</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.logoutConfirmBtn}
+                onPress={async () => {
+                  setShowLogoutModal(false);
+                  await logout();
+                }}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="log-out-outline" size={18} color="#FFFFFF" />
+                <Text style={styles.logoutConfirmText}>Đăng xuất</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -459,7 +500,89 @@ const styles = StyleSheet.create({
   logoutBtn: {
     padding: 6,
     borderRadius: 8,
+    backgroundColor: '#FEE2E2',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.45)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  logoutModalBox: {
+    width: '100%',
+    maxWidth: 340,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 22,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.18,
+    shadowRadius: 20,
+    elevation: 8,
+  },
+  logoutIconCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#FEE2E2',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  logoutModalTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#0F172A',
+    marginBottom: 6,
+  },
+  logoutModalDesc: {
+    fontSize: 13,
+    color: '#64748B',
+    textAlign: 'center',
+    lineHeight: 19,
+    marginBottom: 18,
+  },
+  logoutModalBtnRow: {
+    flexDirection: 'row',
+    width: '100%',
+    gap: 10,
+  },
+  logoutCancelBtn: {
+    flex: 1,
+    height: 46,
+    borderRadius: 12,
     backgroundColor: '#F1F5F9',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  logoutCancelText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#64748B',
+  },
+  logoutConfirmBtn: {
+    flex: 1,
+    height: 46,
+    borderRadius: 12,
+    backgroundColor: '#DC2626',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    shadowColor: '#DC2626',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  logoutConfirmText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
   scrollContent: {
     padding: 16,

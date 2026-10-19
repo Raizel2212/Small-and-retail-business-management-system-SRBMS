@@ -14,6 +14,28 @@ export function validateCccd(cccd: string): string | null {
   return null;
 }
 
+export function validateLoginIdentifier(identifier: string): string | null {
+  if (!identifier || !identifier.trim()) {
+    return 'Vui lòng nhập Email, số điện thoại hoặc số CCCD';
+  }
+  const clean = identifier.trim();
+  if (clean.includes('@')) {
+    if (!EMAIL_REGEX.test(clean)) {
+      return 'Định dạng Email không hợp lệ';
+    }
+    return null;
+  }
+  if (/^\d+$/.test(clean)) {
+    if (clean.length === 10) return null;
+    if (clean.length === 12) return null;
+    return 'Số điện thoại gồm 10 số hoặc CCCD gồm 12 số';
+  }
+  if (clean.length < 3) {
+    return 'Thông tin đăng nhập quá ngắn';
+  }
+  return null;
+}
+
 export function validatePassword(password: string): string | null {
   if (!password) {
     return 'Vui lòng nhập mật khẩu';

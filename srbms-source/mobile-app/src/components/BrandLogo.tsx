@@ -1,82 +1,108 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import Svg, { Path, Polygon } from 'react-native-svg';
+import { View, Text, StyleSheet, StyleProp, ViewStyle, Image } from 'react-native';
 
 interface BrandLogoProps {
   size?: number;
   showText?: boolean;
+  variant?: 'header' | 'vertical';
+  style?: StyleProp<ViewStyle>;
 }
 
-export const BrandLogo: React.FC<BrandLogoProps> = ({ size = 96, showText = true }) => {
+export const BrandLogo: React.FC<BrandLogoProps> = ({
+  size = 40,
+  showText = true,
+  variant = 'header',
+  style,
+}) => {
+  const iconContent = (
+    <View
+      style={[
+        styles.iconBox,
+        {
+          width: size,
+          height: size,
+          borderRadius: Math.max(8, Math.round(size * 0.22)),
+        },
+      ]}
+    >
+      <Image
+        source={require('../../assets/house_logo.png')}
+        style={{
+          width: size - 4,
+          height: size - 4,
+          borderRadius: Math.max(6, Math.round(size * 0.18)),
+        }}
+        resizeMode="contain"
+      />
+    </View>
+  );
+
+  if (variant === 'vertical') {
+    return (
+      <View style={[styles.verticalContainer, style]}>
+        {iconContent}
+        {showText && (
+          <View style={styles.verticalTextBox}>
+            <Text style={styles.verticalTitle}>Hộ kinh doanh</Text>
+            <Text style={styles.verticalSubtitle}>NỀN TẢNG KINH DOANH CHO MỌI NHÀ</Text>
+          </View>
+        )}
+      </View>
+    );
+  }
+
   return (
-    <View style={styles.container}>
-      <Svg width={size} height={size} viewBox="0 0 100 100" fill="none">
-        {/* Khung ngôi nhà màu xanh dương đậm */}
-        <Path
-          d="M 50 18 L 18 45 L 23 49 L 26 46 L 26 80 L 74 80 L 74 68 L 79 72 L 79 46 L 82 49 L 85 45 Z"
-          fill="none"
-          stroke="#1E56A0"
-          strokeWidth="6"
-          strokeLinejoin="round"
-          strokeLinecap="round"
-        />
-
-        {/* Mũi tên tăng trưởng màu cam vượt khỏi mái nhà */}
-        <Path
-          d="M 30 70 L 46 52 L 58 62 L 80 32"
-          fill="none"
-          stroke="#F37021"
-          strokeWidth="6.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-        {/* Đầu mũi tên cam */}
-        <Polygon
-          points="84,26 83,38 72,32"
-          fill="#F37021"
-        />
-
-        {/* Chiếc lá xanh non ở góc trên bên phải mũi tên */}
-        <Path
-          d="M 83 20 C 80 14, 88 12, 91 16 C 94 20, 88 24, 83 20 Z"
-          fill="#22C55E"
-          stroke="#16A34A"
-          strokeWidth="1.2"
-        />
-      </Svg>
-
-      {showText && (
-        <View style={styles.textContainer}>
-          <Text style={styles.title}>HỘ KINH DOANH</Text>
-          <Text style={styles.subtitle}>NỀN TẢNG KINH DOANH CHO MỌI NHÀ</Text>
-        </View>
-      )}
+    <View style={[styles.headerContainer, style]}>
+      {iconContent}
+      {showText && <Text style={styles.headerTitle}>Hộ kinh doanh</Text>}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  headerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  iconBox: {
+    backgroundColor: '#DBF8F3',
+    borderWidth: 1.2,
+    borderColor: '#BFE7DE',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+    shadowColor: '#1E5E4F',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#123D32',
+    marginLeft: 10,
+    letterSpacing: -0.2,
+  },
+  verticalContainer: {
     alignItems: 'center',
     justifyContent: 'center',
   },
-  textContainer: {
+  verticalTextBox: {
     alignItems: 'center',
-    marginTop: 14,
+    marginTop: 12,
   },
-  title: {
+  verticalTitle: {
     fontSize: 22,
     fontWeight: '800',
-    color: '#1E56A0',
-    letterSpacing: 1.2,
-    textAlign: 'center',
+    color: '#1E293B',
+    letterSpacing: 0.5,
   },
-  subtitle: {
+  verticalSubtitle: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#EA580C',
+    color: '#1E5E4F',
     letterSpacing: 0.8,
     marginTop: 4,
-    textAlign: 'center',
   },
 });

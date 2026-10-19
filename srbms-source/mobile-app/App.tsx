@@ -20,8 +20,8 @@ const MainNavigator: React.FC = () => {
   if (isInitializing) {
     return (
       <View style={styles.loadingContainer}>
-        <BrandLogo size={100} />
-        <ActivityIndicator size="large" color="#4579C7" style={styles.loader} />
+        <BrandLogo size={48} />
+        <ActivityIndicator size="large" color="#1E5E4F" style={styles.loader} />
       </View>
     );
   }
@@ -139,7 +139,7 @@ const styles = StyleSheet.create({
     maxWidth: 412,
     height: 860,
     maxHeight: '94%' as any,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#DBF8F3',
     borderRadius: 44,
     borderWidth: 10,
     borderColor: '#1E293B', // Viền máy kim loại đen titan
@@ -182,8 +182,7 @@ const styles = StyleSheet.create({
     flex: 1,
     width: '100%',
     height: '100%',
-    backgroundColor: '#FFFFFF',
-    paddingTop: 14, // Nhường chỗ cho tai thỏ phía trên
+    backgroundColor: '#DBF8F3',
   },
   homeIndicatorBar: {
     position: 'absolute',
