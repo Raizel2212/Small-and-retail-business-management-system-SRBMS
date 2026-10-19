@@ -32,3 +32,22 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE INDEX IF NOT EXISTS idx_users_cccd ON users (cccd);
 CREATE INDEX IF NOT EXISTS idx_users_email ON users (email);
 CREATE INDEX IF NOT EXISTS idx_users_sdt ON users (sdt);
+
+CREATE TABLE IF NOT EXISTS revenue_transactions (
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    transaction_date DATE NOT NULL,
+    customer_name VARCHAR(255) NOT NULL,
+    amount NUMERIC(15, 2) NOT NULL,
+    payment_method VARCHAR(50) NOT NULL DEFAULT 'TIEN_MAT',
+    payment_status VARCHAR(50) NOT NULL DEFAULT 'DA_THU',
+    note VARCHAR(500),
+    created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_revenue_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_rev_tx_user_id ON revenue_transactions (user_id);
+CREATE INDEX IF NOT EXISTS idx_rev_tx_date ON revenue_transactions (transaction_date);
+CREATE INDEX IF NOT EXISTS idx_rev_tx_status ON revenue_transactions (payment_status);
+
