@@ -26,6 +26,16 @@ public class CreateRevenueRequest {
 
     private LocalDate transactionDate;
 
+    private String productName;
+
+    @Builder.Default
+    private Integer quantity = 1;
+
+    private BigDecimal unitPrice;
+
+    @Builder.Default
+    private Boolean isRetailCustomer = false;
+
     // TIEN_MAT hoặc CHUYEN_KHOAN
     @Builder.Default
     private String paymentMethod = "TIEN_MAT";
