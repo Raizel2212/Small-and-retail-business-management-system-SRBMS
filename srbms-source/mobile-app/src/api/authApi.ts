@@ -74,6 +74,17 @@ export const authApi = {
   },
 
   /**
+   * Đăng xuất tài khoản người dùng và hủy phiên đăng nhập
+   * Endpoint: POST /api/v1/user/logout
+   */
+  async logout(): Promise<ApiResponse<void>> {
+    const response = await apiClient.post<ApiResponse<void>>(
+      '/api/v1/user/logout'
+    );
+    return response.data;
+  },
+
+  /**
    * Kiểm tra kết nối tới Server
    */
   async ping(): Promise<boolean> {

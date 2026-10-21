@@ -25,12 +25,14 @@ interface LoginScreenProps {
   onBack: () => void;
   onNavigateToRegister: () => void;
   initialCccd?: string;
+  isRegisteredSuccess?: boolean;
 }
 
 export const LoginScreen: React.FC<LoginScreenProps> = ({
   onBack,
   onNavigateToRegister,
   initialCccd = '',
+  isRegisteredSuccess = false,
 }) => {
   const { login, isLoading, baseUrl, updateBaseUrl } = useAuth();
 
@@ -138,8 +140,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             </Text>
           </View>
 
-          {/* Banner thông báo đăng ký thành công */}
-          {initialCccd ? (
+          {/* Banner thông báo đăng ký thành công - CHỈ hiển thị khi vừa đăng ký tài khoản mới thành công */}
+          {isRegisteredSuccess && initialCccd ? (
             <View style={styles.successBanner}>
               <Ionicons name="checkmark-circle" size={22} color="#059669" />
               <View style={styles.successBannerContent}>

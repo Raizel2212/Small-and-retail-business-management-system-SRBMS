@@ -90,13 +90,25 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const logout = async () => {
+    setIsLoading(true);
     try {
-      await AsyncStorage.removeItem(TOKEN_STORAGE_KEY);
-      await AsyncStorage.removeItem(USER_STORAGE_KEY);
-      setToken(null);
-      setUser(null);
+      // 1. Gửi request đăng xuất lên server Backend
+      await authApi.logout();
     } catch (error) {
-      console.error('Lỗi khi đăng xuất:', error);
+      // Ngay cả khi kết nối mạng lỗi hoặc token hết hạn, vẫn đảm bảo xóa session cục bộ an toàn
+      console.warn('Lỗi khi gọi API logout Backend (vẫn tiếp tục xóa phiên cục bộ):', error);
+    } finally {
+      try {
+        // 2. Luôn xóa sạch Token và User trong AsyncStorage
+        await AsyncStorage.removeItem(TOKEN_STORAGE_KEY);
+        await AsyncStorage.removeItem(USER_STORAGE_KEY);
+        setToken(null);
+        setUser(null);
+      } catch (storageError) {
+        console.error('Lỗi khi xóa bộ nhớ phiên đăng nhập:', storageError);
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
 
