@@ -7,6 +7,7 @@ import com.srbms.exception.AppException;
 import com.srbms.repository.UserRepository;
 import com.srbms.service.UserService;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -45,6 +46,11 @@ public class UserServiceImpl implements UserService {
         User user = userRepository.findByCccd(cccd)
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Không tìm thấy thông tin tài khoản người dùng"));
         return mapToDto(user);
+    }
+
+    @Override
+    public void logout(String cccd) {
+        SecurityContextHolder.clearContext();
     }
 
     private UserDto mapToDto(User user) {
