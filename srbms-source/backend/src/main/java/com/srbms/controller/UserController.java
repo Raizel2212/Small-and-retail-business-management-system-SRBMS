@@ -41,4 +41,11 @@ public class UserController {
         UserDto userDto = userService.getCurrentUser(cccd);
         return ResponseEntity.ok(ApiResponse.ok("Lấy thông tin người dùng thành công", userDto));
     }
+
+    @PostMapping("/logout")
+    public ResponseEntity<ApiResponse<Void>> logout(Authentication authentication) {
+        String cccd = authentication != null ? authentication.getName() : null;
+        userService.logout(cccd);
+        return ResponseEntity.ok(ApiResponse.ok("Đăng xuất thành công", null));
+    }
 }

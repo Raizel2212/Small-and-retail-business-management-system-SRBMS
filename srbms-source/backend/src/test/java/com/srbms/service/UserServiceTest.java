@@ -14,6 +14,10 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
+
+import java.util.Collections;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -85,5 +89,18 @@ class UserServiceTest {
         assertNotNull(result);
         assertEquals("079201001234", result.getCccd());
         assertEquals("Nguyen Van A", result.getFullName());
+    }
+
+    @Test
+    @DisplayName("Đăng xuất thành công và xóa thông tin SecurityContext")
+    void testLogout_Success() {
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken("079201001234", null, Collections.emptyList())
+        );
+        assertNotNull(SecurityContextHolder.getContext().getAuthentication());
+
+        userService.logout("079201001234");
+
+        assertNull(SecurityContextHolder.getContext().getAuthentication());
     }
 }

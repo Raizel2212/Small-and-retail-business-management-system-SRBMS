@@ -8,4 +8,6 @@ public interface UserService {
     UserDto updateBusinessProfile(String cccd, BusinessProfileRequest request);
 
     UserDto getCurrentUser(String cccd);
+
+    void logout(String cccd);
 }
