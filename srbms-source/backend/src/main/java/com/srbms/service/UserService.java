@@ -7,6 +7,8 @@ public interface UserService {
 
     UserDto updateBusinessProfile(String cccd, BusinessProfileRequest request);
 
+    UserDto getBusinessProfile(String cccd);
+
     UserDto getCurrentUser(String cccd);
 
     void logout(String cccd);

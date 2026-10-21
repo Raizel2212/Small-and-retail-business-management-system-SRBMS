@@ -24,6 +24,7 @@ public class UserDto {
     private String status;
     private Boolean isFirstLogin;
     private Integer businessGroup;
+    private String businessRevenueRange;
     private String businessType;
     private String otherBusinessType;
     private String businessName;

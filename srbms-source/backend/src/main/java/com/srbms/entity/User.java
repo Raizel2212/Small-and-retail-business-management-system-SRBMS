@@ -60,6 +60,9 @@ public class User {
     @Column(name = "business_group")
     private Integer businessGroup;
 
+    @Column(name = "business_revenue_range", length = 100)
+    private String businessRevenueRange;
+
     @Column(name = "business_type", length = 100)
     private String businessType;
 
@@ -68,6 +71,9 @@ public class User {
 
     @Column(name = "business_name", length = 255)
     private String businessName;
+
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private HouseholdBusiness householdBusiness;
 
     @CreationTimestamp
     @Column(updatable = false)

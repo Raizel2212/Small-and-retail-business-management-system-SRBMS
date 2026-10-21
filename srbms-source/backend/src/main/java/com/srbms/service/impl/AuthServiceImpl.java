@@ -102,6 +102,7 @@ public class AuthServiceImpl implements AuthService {
                         .status(user.getStatus())
                         .isFirstLogin(user.getIsFirstLogin())
                         .businessGroup(user.getBusinessGroup())
+                        .businessRevenueRange(user.getBusinessRevenueRange())
                         .businessType(user.getBusinessType())
                         .otherBusinessType(user.getOtherBusinessType())
                         .businessName(user.getBusinessName())
