@@ -11,6 +11,7 @@ import {
   Alert,
   Platform,
   Modal,
+  Image,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
@@ -146,6 +147,15 @@ export const BusinessInfoScreen: React.FC<BusinessInfoScreenProps> = ({ onComple
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar style="dark" />
+
+      {/* Watermark Background Trống đồng Đông Sơn & Bản đồ Việt Nam */}
+      <View style={styles.backgroundWatermarkBox} pointerEvents="none">
+        <Image
+          source={require('../../assets/trong_dong_map_bg.png')}
+          style={styles.backgroundWatermark}
+          resizeMode="cover"
+        />
+      </View>
 
       {/* Header Bar */}
       <View style={styles.headerBar}>
@@ -484,16 +494,32 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: '#F8FAFC',
+    position: 'relative',
+  },
+  backgroundWatermarkBox: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 0,
+    pointerEvents: 'none',
+  },
+  backgroundWatermark: {
+    width: '100%',
+    height: '100%',
+    opacity: 0.28, // Mờ nhẹ nhàng, không bị chói mắt
   },
   headerBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingVertical: 14,
-    backgroundColor: '#FFFFFF',
+    paddingTop: Platform.OS === 'web' ? 42 : 14,
+    paddingBottom: 12,
+    backgroundColor: 'transparent',
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: '#CBD5E1',
   },
   headerLeft: {
     flexDirection: 'row',
@@ -606,11 +632,11 @@ const styles = StyleSheet.create({
   },
   welcomeCard: {
     flexDirection: 'row',
-    backgroundColor: '#EFF6FF',
+    backgroundColor: 'rgba(239, 246, 255, 0.65)',
     borderRadius: 16,
     padding: 16,
-    borderWidth: 1,
-    borderColor: '#BFDBFE',
+    borderWidth: 1.5,
+    borderColor: '#93C5FD',
     marginBottom: 16,
     alignItems: 'flex-start',
   },
@@ -659,12 +685,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   sectionCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'rgba(255, 255, 255, 0.45)',
     borderRadius: 16,
     padding: 18,
     marginBottom: 18,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderWidth: 1.5,
+    borderColor: '#CBD5E1',
     shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -709,10 +735,10 @@ const styles = StyleSheet.create({
   },
   groupCard: {
     width: 230,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: 'rgba(248, 250, 252, 0.70)',
     borderRadius: 14,
     borderWidth: 1.5,
-    borderColor: '#E2E8F0',
+    borderColor: '#CBD5E1',
     padding: 14,
     position: 'relative',
   },

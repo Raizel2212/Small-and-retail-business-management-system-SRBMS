@@ -11,12 +11,12 @@ import {
   TextInput,
   Platform,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { BrandLogo } from '../components/BrandLogo';
-import { ServerConfigModal } from '../components/ServerConfigModal';
 
 type BottomTabType = 'home' | 'search' | 'camera' | 'tax' | 'settings';
 
@@ -25,11 +25,10 @@ export interface HomeScreenProps {
 }
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigateToRevenueDetail }) => {
-  const { user, token, logout, baseUrl, updateBaseUrl } = useAuth();
+  const { user, token, logout } = useAuth();
 
   const [activeTab, setActiveTab] = useState<BottomTabType>('home');
   const [showNotificationModal, setShowNotificationModal] = useState(false);
-  const [showServerConfig, setShowServerConfig] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [periodFilter, setPeriodFilter] = useState<'month' | 'quarter' | 'year'>('month');
@@ -934,26 +933,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigateToRevenueDetai
         </View>
       </View>
 
-      {/* 4. Cấu hình kết nối Backend */}
-      <View style={styles.sectionCard}>
-        <View style={styles.sectionHeader}>
-          <Ionicons name="server-outline" size={20} color="#1E56A0" />
-          <Text style={styles.sectionTitle}>Cấu hình kết nối Backend</Text>
-        </View>
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Địa chỉ API Server:</Text>
-          <Text style={styles.infoValueBold}>{baseUrl}</Text>
-        </View>
-        <TouchableOpacity
-          style={styles.settingActionBtn}
-          onPress={() => setShowServerConfig(true)}
-        >
-          <Ionicons name="pencil" size={16} color="#1E56A0" />
-          <Text style={styles.settingActionBtnText}>Đổi địa chỉ Server Backend</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* 5. Thông tin ứng dụng */}
+      {/* 4. Thông tin ứng dụng */}
       <View style={styles.sectionCard}>
         <View style={styles.sectionHeader}>
           <Ionicons name="information-circle-outline" size={20} color="#1E56A0" />
@@ -970,7 +950,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigateToRevenueDetai
         </View>
       </View>
 
-      {/* 6. Nút Đăng xuất tài khoản */}
+      {/* 5. Nút Đăng xuất tài khoản */}
       <TouchableOpacity
         style={styles.profileLogoutBtn}
         onPress={handleLogout}
@@ -992,16 +972,35 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigateToRevenueDetai
     <SafeAreaView style={styles.safeArea}>
       <StatusBar style="dark" />
 
+      {/* Watermark Background Trống đồng Đông Sơn & Bản đồ Việt Nam mờ nhẹ toàn bộ nền */}
+      <View style={styles.backgroundWatermarkBox} pointerEvents="none">
+        <Image
+          source={require('../../assets/trong_dong_map_bg.png')}
+          style={styles.backgroundWatermark}
+          resizeMode="cover"
+        />
+      </View>
+
+      {/* ======================================================== */}
       {/* ======================================================== */}
       {/* HEADER:
-          - Tên user ở góc trên cùng bên trái
-          - Ở giữa là Logo của App
+          - Logo ở góc trên cùng bên trái
+          - Tên user và lời chào ở giữa (hiển thị đầy đủ họ tên)
           - Bên phải là Icon chuông thông báo
       {/* ======================================================== */}
       <View style={styles.headerBar}>
-        {/* Góc trên cùng bên trái: Tên User (Chạm để tới Cài đặt & Profile) */}
+        {/* Góc trên cùng bên trái: Logo của App */}
         <TouchableOpacity
-          style={styles.headerLeftUser}
+          style={styles.headerLeftLogo}
+          onPress={() => setActiveTab('home')}
+          activeOpacity={0.7}
+        >
+          <BrandLogo size={36} showText={false} />
+        </TouchableOpacity>
+
+        {/* Ở giữa: Lời chào và Tên User (Chạm để tới Cài đặt & Profile) */}
+        <TouchableOpacity
+          style={styles.headerCenterUser}
           onPress={() => setActiveTab('settings')}
           activeOpacity={0.7}
         >
@@ -1017,11 +1016,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigateToRevenueDetai
             </Text>
           </View>
         </TouchableOpacity>
-
-        {/* Ở giữa: Logo của App */}
-        <View style={styles.headerCenterLogo}>
-          <BrandLogo size={36} showText={false} />
-        </View>
 
         {/* Bên phải: Icon chuông thông báo */}
         <View style={styles.headerRightActions}>
@@ -1278,14 +1272,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigateToRevenueDetai
           </View>
         </View>
       </Modal>
-
-      {/* Modal Cấu hình Server */}
-      <ServerConfigModal
-        visible={showServerConfig}
-        onClose={() => setShowServerConfig(false)}
-        currentUrl={baseUrl}
-        onSave={updateBaseUrl}
-      />
     </SafeAreaView>
   );
 };
@@ -1294,21 +1280,44 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: '#F8FAFC',
+    position: 'relative',
+  },
+  backgroundWatermarkBox: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 0,
+    pointerEvents: 'none',
+  },
+  backgroundWatermark: {
+    width: '100%',
+    height: '100%',
+    opacity: 0.28, // Mờ nhẹ nhàng, không bị chói mắt, đọc rõ từng chữ và số
   },
   headerBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 10,
-    backgroundColor: '#FFFFFF',
+    paddingTop: Platform.OS === 'web' ? 42 : 12,
+    paddingBottom: 10,
+    backgroundColor: 'transparent', // 100% trong suốt, nhìn xuyên hình nền trống đồng
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: 'rgba(203, 213, 225, 0.4)',
   },
-  headerLeftUser: {
+  headerLeftLogo: {
+    width: 44,
+    alignItems: 'flex-start',
+    justifyContent: 'center',
+  },
+  headerCenterUser: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 6,
   },
   userMiniAvatar: {
     width: 36,
@@ -1325,7 +1334,8 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
   userNameCol: {
-    maxWidth: 120,
+    flexShrink: 1,
+    maxWidth: 220,
   },
   userGreeting: {
     fontSize: 10,
@@ -1337,19 +1347,18 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#0F172A',
   },
-  headerCenterLogo: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   headerRightActions: {
-    flex: 1,
+    width: 44,
     alignItems: 'flex-end',
+    justifyContent: 'center',
   },
   bellBtn: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: 'rgba(255, 255, 255, 0.40)',
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
@@ -1373,12 +1382,12 @@ const styles = StyleSheet.create({
     paddingBottom: 96,
   },
   businessBadgeCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'rgba(255, 255, 255, 0.45)',
     borderRadius: 16,
     padding: 14,
     marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderWidth: 1.5,
+    borderColor: '#CBD5E1',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -1398,7 +1407,9 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 10,
-    backgroundColor: '#EFF6FF',
+    backgroundColor: 'rgba(239, 246, 255, 0.85)',
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 10,
@@ -1430,7 +1441,9 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   typePill: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: 'rgba(255, 255, 255, 0.85)',
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 6,
@@ -1442,9 +1455,11 @@ const styles = StyleSheet.create({
   },
   periodPicker: {
     flexDirection: 'row',
-    backgroundColor: '#F1F5F9',
+    backgroundColor: 'rgba(241, 245, 249, 0.70)',
     borderRadius: 8,
     padding: 2,
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
   },
   periodBtn: {
     paddingHorizontal: 8,
@@ -1452,7 +1467,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   periodBtnActive: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
@@ -1469,12 +1484,12 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   financeCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'rgba(255, 255, 255, 0.45)',
     borderRadius: 18,
     padding: 16,
     marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderWidth: 1.5,
+    borderColor: '#CBD5E1',
     shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.05,
@@ -1482,8 +1497,8 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   summaryCardBorder: {
-    borderColor: '#BFDBFE',
-    backgroundColor: '#FFFFFF',
+    borderColor: '#93C5FD',
+    backgroundColor: 'rgba(255, 255, 255, 0.45)',
   },
   financeCardHeader: {
     flexDirection: 'row',
@@ -1517,7 +1532,9 @@ const styles = StyleSheet.create({
   growthBadgeGreen: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#ECFDF5',
+    backgroundColor: 'rgba(236, 253, 245, 0.90)',
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
@@ -1529,7 +1546,9 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   ratioBadgeRed: {
-    backgroundColor: '#FEF2F2',
+    backgroundColor: 'rgba(254, 242, 242, 0.90)',
+    borderWidth: 1,
+    borderColor: '#FECACA',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
@@ -1540,7 +1559,9 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   summaryBadgeBlue: {
-    backgroundColor: '#EFF6FF',
+    backgroundColor: 'rgba(239, 246, 255, 0.90)',
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
@@ -1573,10 +1594,12 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   breakdownBox: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: 'rgba(255, 255, 255, 0.70)',
     borderRadius: 12,
     padding: 12,
     marginBottom: 14,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
   breakdownItem: {
     flexDirection: 'row',
@@ -1706,9 +1729,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'rgba(255, 255, 255, 0.75)',
     borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
+    borderTopColor: '#CBD5E1',
     paddingVertical: 8,
     paddingHorizontal: 8,
     position: 'relative',
@@ -1783,12 +1806,12 @@ const styles = StyleSheet.create({
   recentSearchItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'rgba(255, 255, 255, 0.50)',
     borderRadius: 10,
     padding: 12,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#CBD5E1',
     gap: 10,
   },
   recentSearchText: {
@@ -1804,12 +1827,12 @@ const styles = StyleSheet.create({
   },
   cameraFrame: {
     width: '100%',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'rgba(255, 255, 255, 0.45)',
     borderRadius: 20,
     padding: 24,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#BFDBFE',
+    borderWidth: 1.5,
+    borderColor: '#CBD5E1',
     shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.08,
@@ -1862,12 +1885,12 @@ const styles = StyleSheet.create({
   profileCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'rgba(255, 255, 255, 0.45)',
     borderRadius: 16,
     padding: 16,
     marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderWidth: 1.5,
+    borderColor: '#CBD5E1',
   },
   avatarCircle: {
     width: 52,
@@ -1923,12 +1946,12 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   sectionCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'rgba(255, 255, 255, 0.45)',
     borderRadius: 16,
     padding: 16,
     marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderWidth: 1.5,
+    borderColor: '#CBD5E1',
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -2118,21 +2141,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#FFFFFF',
   },
-  settingActionBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#EFF6FF',
-    paddingVertical: 10,
-    borderRadius: 10,
-    gap: 6,
-    marginTop: 10,
-  },
-  settingActionBtnText: {
-    color: '#1E56A0',
-    fontSize: 13,
-    fontWeight: '600',
-  },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(15, 23, 42, 0.45)',
@@ -2201,12 +2209,12 @@ const styles = StyleSheet.create({
   taxHeaderHero: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'rgba(255, 255, 255, 0.45)',
     borderRadius: 16,
     padding: 16,
     marginBottom: 14,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderWidth: 1.5,
+    borderColor: '#CBD5E1',
     gap: 12,
   },
   taxHeroIconCircle: {
@@ -2229,11 +2237,11 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
   taxPersonalCard: {
-    backgroundColor: '#F0FDF4',
+    backgroundColor: 'rgba(240, 253, 244, 0.65)',
     borderRadius: 16,
     padding: 14,
     marginBottom: 14,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: '#BBF7D0',
   },
   taxPersonalHeader: {
@@ -2263,10 +2271,12 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   taxPersonalBody: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'rgba(255, 255, 255, 0.70)',
     borderRadius: 12,
     padding: 12,
     gap: 8,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
   taxCheckRow: {
     flexDirection: 'row',
@@ -2290,9 +2300,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 7,
     borderRadius: 20,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'rgba(255, 255, 255, 0.70)',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#CBD5E1',
   },
   taxFilterChipActive: {
     backgroundColor: '#1E56A0',
@@ -2321,12 +2331,12 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   taxLawCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'rgba(255, 255, 255, 0.45)',
     borderRadius: 16,
     padding: 14,
     marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderWidth: 1.5,
+    borderColor: '#CBD5E1',
   },
   taxLawCardHeader: {
     flexDirection: 'row',
@@ -2356,11 +2366,11 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   taxRateBox: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: 'rgba(255, 255, 255, 0.70)',
     borderRadius: 10,
     padding: 10,
     borderWidth: 1,
-    borderColor: '#F1F5F9',
+    borderColor: '#E2E8F0',
   },
   taxRateRow: {
     flexDirection: 'row',

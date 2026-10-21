@@ -65,17 +65,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   iconBox: {
-    backgroundColor: '#DBF8F3',
-    borderWidth: 1.2,
-    borderColor: '#BFE7DE',
+    backgroundColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
-    shadowColor: '#1E5E4F',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 2,
-    elevation: 1,
   },
   headerTitle: {
     fontSize: 20,

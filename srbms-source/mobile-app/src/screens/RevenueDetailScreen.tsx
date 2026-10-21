@@ -12,6 +12,7 @@ import {
   Alert,
   Platform,
   RefreshControl,
+  Image,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
@@ -311,6 +312,15 @@ export const RevenueDetailScreen: React.FC<RevenueDetailScreenProps> = ({ onBack
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar style="dark" />
+
+      {/* Watermark Background Trống đồng Đông Sơn & Bản đồ Việt Nam */}
+      <View style={styles.backgroundWatermarkBox} pointerEvents="none">
+        <Image
+          source={require('../../assets/trong_dong_map_bg.png')}
+          style={styles.backgroundWatermark}
+          resizeMode="cover"
+        />
+      </View>
 
       {/* Top Header Bar điều hướng */}
       <View style={styles.navHeader}>
@@ -1356,14 +1366,30 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: '#EDF7F2', // Background màu xanh nhẹ theo đúng yêu cầu
+    position: 'relative',
+  },
+  backgroundWatermarkBox: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 0,
+    pointerEvents: 'none',
+  },
+  backgroundWatermark: {
+    width: '100%',
+    height: '100%',
+    opacity: 0.28, // Mờ nhẹ nhàng, không bị chói mắt
   },
   navHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 10,
-    backgroundColor: '#EDF7F2',
+    paddingTop: Platform.OS === 'web' ? 42 : 10,
+    paddingBottom: 10,
+    backgroundColor: 'transparent',
     borderBottomWidth: 1,
     borderBottomColor: '#D1E7DD',
   },
@@ -1405,7 +1431,7 @@ const styles = StyleSheet.create({
 
   // Khung chính mô phỏng màn hình trong ảnh người dùng gửi
   mainCard: {
-    backgroundColor: '#F3FAF6', // Nền xanh nhạt pastel
+    backgroundColor: 'rgba(243, 250, 246, 0.45)', // Nền trong suốt
     borderRadius: 20,
     borderWidth: 1.5,
     borderColor: '#BFE7D3',
@@ -1471,7 +1497,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: '#4ADE80',
     borderRadius: 6,
-    backgroundColor: '#E8FDF0',
+    backgroundColor: 'rgba(232, 253, 240, 0.55)',
     overflow: 'hidden',
     marginBottom: 12,
   },
@@ -1488,7 +1514,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     borderRightWidth: 1.5,
     borderRightColor: '#4ADE80',
-    backgroundColor: '#DEF9E7',
+    backgroundColor: 'rgba(222, 249, 231, 0.65)',
   },
   summaryColLeftText: {
     fontSize: 14,
@@ -1527,7 +1553,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 10,
     paddingHorizontal: 10,
-    backgroundColor: '#DEF9E7',
+    backgroundColor: 'rgba(222, 249, 231, 0.65)',
   },
   unpaidLabel: {
     fontSize: 13,
@@ -1552,7 +1578,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 10,
     borderRadius: 6,
-    backgroundColor: '#ECFDF5',
+    backgroundColor: 'rgba(236, 253, 245, 0.90)',
     borderWidth: 1,
     borderColor: '#6EE7B7',
   },
@@ -1564,16 +1590,16 @@ const styles = StyleSheet.create({
 
   // 5. Bảng dữ liệu
   tableContainer: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'rgba(255, 255, 255, 0.50)',
     borderRadius: 6,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: '#CBD5E1',
     overflow: 'hidden',
     width: '100%',
   },
   tableHeaderRow: {
     flexDirection: 'row',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: 'rgba(248, 250, 252, 0.75)',
     borderBottomWidth: 1.5,
     borderBottomColor: '#CBD5E1',
     paddingVertical: 6,
@@ -1623,12 +1649,12 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     borderBottomWidth: 1,
     borderBottomColor: '#E2E8F0',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'rgba(255, 255, 255, 0.50)',
     minHeight: 40,
     alignItems: 'center',
   },
   tableDataRowEven: {
-    backgroundColor: '#F9FCFA',
+    backgroundColor: 'rgba(249, 252, 250, 0.35)',
   },
   emptyRow: {
     height: 36,
