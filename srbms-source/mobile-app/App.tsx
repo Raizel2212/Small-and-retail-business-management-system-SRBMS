@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, StyleSheet, ActivityIndicator, Platform, Dimensions } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
@@ -10,7 +10,7 @@ import { RevenueDetailScreen } from './src/screens/RevenueDetailScreen';
 import { BusinessInfoScreen } from './src/screens/BusinessInfoScreen';
 import { BrandLogo } from './src/components/BrandLogo';
 
-type AuthScreenState = 'welcome' | 'login' | 'register' | 'revenue-preview';
+type AuthScreenState = 'welcome' | 'login' | 'register';
 type AppScreenState = 'home' | 'revenue-detail';
 
 const MainNavigator: React.FC = () => {
@@ -18,6 +18,29 @@ const MainNavigator: React.FC = () => {
   const [currentScreen, setCurrentScreen] = useState<AuthScreenState>('welcome');
   const [appScreen, setAppScreen] = useState<AppScreenState>('home');
   const [prefilledCccd, setPrefilledCccd] = useState<string>('');
+  const [isRegisteredSuccess, setIsRegisteredSuccess] = useState<boolean>(false);
+  const prevUserRef = useRef(user);
+
+  // Theo dõi trạng thái phiên đăng nhập:
+  // - Khi có user: sẵn sàng đưa về màn hình 'login' và lưu lại CCCD
+  // - Khi user vừa đăng xuất (chuyển từ có dữ liệu sang null): đưa ngay về màn hình 'login', KHÔNG hiện banner đăng ký
+  useEffect(() => {
+    if (user) {
+      if (user.cccd) {
+        setPrefilledCccd(user.cccd);
+      }
+      setIsRegisteredSuccess(false);
+      setCurrentScreen('login');
+    } else if (prevUserRef.current && !user) {
+      if (prevUserRef.current.cccd) {
+        setPrefilledCccd(prevUserRef.current.cccd);
+      }
+      setIsRegisteredSuccess(false);
+      setCurrentScreen('login');
+      setAppScreen('home');
+    }
+    prevUserRef.current = user;
+  }, [user]);
 
   // 1. Đang khôi phục session từ AsyncStorage khi khởi động app
   if (isInitializing) {
@@ -63,9 +86,16 @@ const MainNavigator: React.FC = () => {
   if (currentScreen === 'login') {
     return (
       <LoginScreen
-        onBack={() => setCurrentScreen('welcome')}
-        onNavigateToRegister={() => setCurrentScreen('register')}
+        onBack={() => {
+          setIsRegisteredSuccess(false);
+          setCurrentScreen('welcome');
+        }}
+        onNavigateToRegister={() => {
+          setIsRegisteredSuccess(false);
+          setCurrentScreen('register');
+        }}
         initialCccd={prefilledCccd}
+        isRegisteredSuccess={isRegisteredSuccess}
       />
     );
   }
@@ -73,10 +103,16 @@ const MainNavigator: React.FC = () => {
   if (currentScreen === 'register') {
     return (
       <RegisterScreen
-        onBack={() => setCurrentScreen('welcome')}
+        onBack={() => {
+          setIsRegisteredSuccess(false);
+          setCurrentScreen('welcome');
+        }}
         onNavigateToLogin={(registeredCccd) => {
           if (registeredCccd) {
             setPrefilledCccd(registeredCccd);
+            setIsRegisteredSuccess(true);
+          } else {
+            setIsRegisteredSuccess(false);
           }
           setCurrentScreen('login');
         }}
@@ -84,16 +120,17 @@ const MainNavigator: React.FC = () => {
     );
   }
 
-  if (currentScreen === 'revenue-preview') {
-    return <RevenueDetailScreen onBack={() => setCurrentScreen('welcome')} />;
-  }
-
   // Màn hình mặc định ban đầu: WelcomeScreen (khớp với mockup hình ảnh người dùng cung cấp)
   return (
     <WelcomeScreen
-      onNavigateToLogin={() => setCurrentScreen('login')}
-      onNavigateToRegister={() => setCurrentScreen('register')}
-      onNavigateToRevenuePreview={() => setCurrentScreen('revenue-preview')}
+      onNavigateToLogin={() => {
+        setIsRegisteredSuccess(false);
+        setCurrentScreen('login');
+      }}
+      onNavigateToRegister={() => {
+        setIsRegisteredSuccess(false);
+        setCurrentScreen('register');
+      }}
     />
   );
 };

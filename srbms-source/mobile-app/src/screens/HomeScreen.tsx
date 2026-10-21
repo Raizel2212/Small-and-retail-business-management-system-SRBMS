@@ -10,6 +10,7 @@ import {
   Modal,
   TextInput,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
@@ -30,6 +31,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigateToRevenueDetai
   const [showNotificationModal, setShowNotificationModal] = useState(false);
   const [showServerConfig, setShowServerConfig] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [periodFilter, setPeriodFilter] = useState<'month' | 'quarter' | 'year'>('month');
 
   // Search state
@@ -823,6 +825,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigateToRevenueDetai
             <View style={styles.logoutModalBtnRow}>
               <TouchableOpacity
                 style={styles.logoutCancelBtn}
+                disabled={isLoggingOut}
                 onPress={() => setShowLogoutModal(false)}
                 activeOpacity={0.7}
               >
@@ -830,15 +833,29 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigateToRevenueDetai
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={styles.logoutConfirmBtn}
+                style={[styles.logoutConfirmBtn, isLoggingOut && { opacity: 0.7 }]}
+                disabled={isLoggingOut}
                 onPress={async () => {
-                  setShowLogoutModal(false);
-                  await logout();
+                  setIsLoggingOut(true);
+                  try {
+                    await logout();
+                    setShowLogoutModal(false);
+                  } catch (e) {
+                    setShowLogoutModal(false);
+                  } finally {
+                    setIsLoggingOut(false);
+                  }
                 }}
                 activeOpacity={0.8}
               >
-                <Ionicons name="log-out-outline" size={18} color="#FFFFFF" />
-                <Text style={styles.logoutConfirmText}>Đăng xuất</Text>
+                {isLoggingOut ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <>
+                    <Ionicons name="log-out-outline" size={18} color="#FFFFFF" />
+                    <Text style={styles.logoutConfirmText}>Đăng xuất</Text>
+                  </>
+                )}
               </TouchableOpacity>
             </View>
           </View>
