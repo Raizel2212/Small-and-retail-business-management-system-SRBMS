@@ -30,6 +30,9 @@ class UserServiceTest {
     @Mock
     private UserRepository userRepository;
 
+    @Mock
+    private com.srbms.repository.HouseholdBusinessRepository householdBusinessRepository;
+
     @InjectMocks
     private UserServiceImpl userService;
 
@@ -55,7 +58,7 @@ class UserServiceTest {
     }
 
     @Test
-    @DisplayName("Cập nhật thông tin hộ kinh doanh thành công và đổi isFirstLogin thành false")
+    @DisplayName("Cập nhật thông tin hộ kinh doanh thành công (Nhóm 2) và đổi isFirstLogin thành false")
     void testUpdateBusinessProfile_Success() {
         when(userRepository.findByCccd("079201001234")).thenReturn(Optional.of(mockUser));
         when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -64,10 +67,69 @@ class UserServiceTest {
 
         assertNotNull(result);
         assertEquals(2, result.getBusinessGroup());
+        assertEquals("Từ 1 đến 3 tỷ", result.getBusinessRevenueRange());
         assertEquals("Thương mại", result.getBusinessType());
         assertEquals("Cửa hàng Minh Phát", result.getBusinessName());
         assertFalse(result.getIsFirstLogin());
         verify(userRepository, times(1)).save(mockUser);
+    }
+
+    @Test
+    @DisplayName("Cập nhật thông tin hộ kinh doanh Nhóm 4 (Từ 50 tỷ trở lên)")
+    void testUpdateBusinessProfile_Group4() {
+        when(userRepository.findByCccd("079201001234")).thenReturn(Optional.of(mockUser));
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        BusinessProfileRequest req = BusinessProfileRequest.builder()
+                .businessGroup(4)
+                .businessType("Bán lẻ")
+                .businessName("Chuỗi siêu thị Việt")
+                .build();
+
+        UserDto result = userService.updateBusinessProfile("079201001234", req);
+
+        assertNotNull(result);
+        assertEquals(4, result.getBusinessGroup());
+        assertEquals("Từ 50 tỷ trở lên", result.getBusinessRevenueRange());
+        assertEquals("Bán lẻ", result.getBusinessType());
+    }
+
+    @Test
+    @DisplayName("Cập nhật loại hình kinh doanh là Khác với mô tả chi tiết thành công")
+    void testUpdateBusinessProfile_OtherType_Success() {
+        when(userRepository.findByCccd("079201001234")).thenReturn(Optional.of(mockUser));
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        BusinessProfileRequest req = BusinessProfileRequest.builder()
+                .businessGroup(1)
+                .businessType("Khác")
+                .otherBusinessType("Tiệm đồ gốm thủ công nghệ thuật")
+                .businessName("Gốm Việt")
+                .build();
+
+        UserDto result = userService.updateBusinessProfile("079201001234", req);
+
+        assertNotNull(result);
+        assertEquals(1, result.getBusinessGroup());
+        assertEquals("Dưới 1 tỷ", result.getBusinessRevenueRange());
+        assertEquals("Khác", result.getBusinessType());
+        assertEquals("Tiệm đồ gốm thủ công nghệ thuật", result.getOtherBusinessType());
+    }
+
+    @Test
+    @DisplayName("Cập nhật loại hình kinh doanh là Khác nhưng thiếu mô tả chi tiết thì báo lỗi BAD_REQUEST")
+    void testUpdateBusinessProfile_OtherType_MissingDescription() {
+        when(userRepository.findByCccd("079201001234")).thenReturn(Optional.of(mockUser));
+
+        BusinessProfileRequest req = BusinessProfileRequest.builder()
+                .businessGroup(1)
+                .businessType("Khác")
+                .otherBusinessType("") // rỗng
+                .build();
+
+        AppException ex = assertThrows(AppException.class, () -> userService.updateBusinessProfile("079201001234", req));
+        assertEquals("Vui lòng nhập tên loại hình kinh doanh cụ thể cho mục 'Khác'", ex.getMessage());
+        verify(userRepository, never()).save(any());
     }
 
     @Test
