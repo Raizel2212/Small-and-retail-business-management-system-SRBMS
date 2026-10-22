@@ -127,6 +127,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const mergedUser: User = {
           ...(user as User),
           ...response.data,
+          businessGroup: payload.businessGroup,
           isFirstLogin: false,
         };
         await AsyncStorage.setItem(USER_STORAGE_KEY, JSON.stringify(mergedUser));
