@@ -117,24 +117,24 @@ public class UserServiceImpl implements UserService {
     }
 
     private UserDto mapToDto(User user) {
-        return UserDto.builder()
-                .id(user.getId())
-                .cccd(user.getCccd())
-                .username(user.getUsername())
-                .fullName(user.getFullName())
-                .sdt(user.getSdt())
-                .email(user.getEmail())
-                .dateOfBirth(user.getDateOfBirth())
-                .role(user.getRole())
-                .status(user.getStatus())
-                .isFirstLogin(user.getIsFirstLogin())
-                .businessGroup(user.getBusinessGroup())
-                .businessRevenueRange(user.getBusinessRevenueRange())
-                .businessType(user.getBusinessType())
-                .otherBusinessType(user.getOtherBusinessType())
-                .businessName(user.getBusinessName())
-                .createdAt(user.getCreatedAt())
-                .updatedAt(user.getUpdatedAt())
-                .build();
+        UserDto dto = new UserDto();
+        dto.setId(user.getId());
+        dto.setCccd(user.getCccd());
+        dto.setUsername(user.getUsername());
+        dto.setFullName(user.getFullName());
+        dto.setSdt(user.getSdt());
+        dto.setEmail(user.getEmail());
+        dto.setDateOfBirth(user.getDateOfBirth());
+        dto.setRole(user.getRole());
+        dto.setStatus(user.getStatus());
+        dto.setIsFirstLogin(user.getIsFirstLogin());
+        dto.setBusinessGroup(user.getBusinessGroup());
+        dto.setBusinessRevenueRange(user.getBusinessRevenueRange());
+        dto.setBusinessType(user.getBusinessType());
+        dto.setOtherBusinessType(user.getOtherBusinessType());
+        dto.setBusinessName(user.getBusinessName());
+        dto.setCreatedAt(user.getCreatedAt());
+        dto.setUpdatedAt(user.getUpdatedAt());
+        return dto;
     }
 }

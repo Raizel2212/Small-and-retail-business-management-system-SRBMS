@@ -1,5 +1,6 @@
 package com.srbms.dto.request;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -13,6 +14,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class BusinessProfileRequest {
 
     @NotNull(message = "Vui lòng chọn nhóm hộ kinh doanh (từ nhóm 1 đến nhóm 4)")
