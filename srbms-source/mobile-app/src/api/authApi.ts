@@ -51,13 +51,24 @@ export const authApi = {
   },
 
   /**
-   * Cập nhật thông tin chi tiết Hộ kinh doanh (Nhóm 1-3, Loại hình, Khác)
+   * Cập nhật thông tin chi tiết Hộ kinh doanh (Nhóm 1-4, Loại hình, Khác)
    * Endpoint: PUT /api/v1/user/business-profile
    */
   async updateBusinessProfile(payload: import('../types/auth').BusinessProfileRequest): Promise<ApiResponse<import('../types/auth').User>> {
     const response = await apiClient.put<ApiResponse<import('../types/auth').User>>(
       '/api/v1/user/business-profile',
       payload
+    );
+    return response.data;
+  },
+
+  /**
+   * Lấy cấu hình danh mục Hộ kinh doanh (4 nhóm hộ kinh doanh & danh sách loại hình kinh doanh)
+   * Endpoint: GET /api/v1/business-config
+   */
+  async getBusinessConfig(): Promise<ApiResponse<import('../types/auth').BusinessConfigResponse>> {
+    const response = await apiClient.get<ApiResponse<import('../types/auth').BusinessConfigResponse>>(
+      '/api/v1/business-config'
     );
     return response.data;
   },

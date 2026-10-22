@@ -10,6 +10,7 @@ export interface User {
   dateOfBirth?: string;
   isFirstLogin?: boolean;
   businessGroup?: number | null;
+  businessRevenueRange?: string | null;
   businessType?: string | null;
   otherBusinessType?: string | null;
   businessName?: string | null;
@@ -22,6 +23,29 @@ export interface BusinessProfileRequest {
   businessType: string;
   otherBusinessType?: string;
   businessName?: string;
+  revenueRange?: string;
+}
+
+export interface BusinessGroupItem {
+  group: number;
+  name: string;
+  title: string;
+  revenueRange: string;
+  minRevenue: number;
+  maxRevenue: number | null;
+  description: string;
+}
+
+export interface BusinessTypeItem {
+  code: string;
+  label: string;
+  description: string;
+  requiresCustomInput: boolean;
+}
+
+export interface BusinessConfigResponse {
+  groups: BusinessGroupItem[];
+  businessTypes: BusinessTypeItem[];
 }
 
 export interface AuthData {
