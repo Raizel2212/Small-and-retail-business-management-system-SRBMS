@@ -251,7 +251,7 @@ export const revenueApi = {
       transactionDateFormatted: dateFormatted,
       customerName: payload.customerName,
       productName: payload.productName,
-      quantity: payload.quantity || 1,
+      quantity: payload.quantity !== undefined ? payload.quantity : 0,
       unitPrice: payload.unitPrice,
       unitPriceFormatted: payload.unitPrice ? formatVND(payload.unitPrice) : undefined,
       isRetailCustomer: payload.isRetailCustomer,
