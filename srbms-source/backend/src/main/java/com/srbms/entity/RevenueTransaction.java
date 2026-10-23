@@ -44,7 +44,7 @@ public class RevenueTransaction {
 
     @Column(name = "quantity")
     @Builder.Default
-    private Integer quantity = 1;
+    private Integer quantity = 0;
 
     @Column(name = "unit_price", precision = 15, scale = 2)
     private BigDecimal unitPrice;

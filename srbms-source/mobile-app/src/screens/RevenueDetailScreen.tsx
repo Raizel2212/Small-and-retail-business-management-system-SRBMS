@@ -48,7 +48,7 @@ export const RevenueDetailScreen: React.FC<RevenueDetailScreenProps> = ({ onBack
   const [formIsRetailCustomer, setFormIsRetailCustomer] = useState<boolean>(false);
   const [formCustomerName, setFormCustomerName] = useState<string>('');
   const [formProductName, setFormProductName] = useState<string>('');
-  const [formQuantity, setFormQuantity] = useState<number>(1);
+  const [formQuantity, setFormQuantity] = useState<string>('0');
   const [formUnitPrice, setFormUnitPrice] = useState<string>('');
   const [formDate, setFormDate] = useState<string>('');
   const [formPaymentMethod, setFormPaymentMethod] = useState<'TIEN_MAT' | 'CHUYEN_KHOAN'>('TIEN_MAT');
@@ -89,7 +89,7 @@ export const RevenueDetailScreen: React.FC<RevenueDetailScreenProps> = ({ onBack
 
   // Đơn giá và thành tiền tự động tính real-time
   const parsedUnitPrice = parseFloat(formUnitPrice.replace(/[^0-9]/g, '')) || 0;
-  const currentQuantity = formQuantity > 0 ? formQuantity : 1;
+  const currentQuantity = parseInt(formQuantity, 10) || 0;
   const computedTotalAmount = currentQuantity * parsedUnitPrice;
   const computedTotalFormatted = computedTotalAmount.toLocaleString('vi-VN');
 
@@ -107,7 +107,7 @@ export const RevenueDetailScreen: React.FC<RevenueDetailScreenProps> = ({ onBack
     setFormCustomerName('');
     setFormProductName('');
     setSelectedProductId('');
-    setFormQuantity(1);
+    setFormQuantity('0');
     setFormUnitPrice('');
     setFormDate(formattedToday);
     setFormPaymentMethod('TIEN_MAT');
@@ -164,22 +164,31 @@ export const RevenueDetailScreen: React.FC<RevenueDetailScreenProps> = ({ onBack
 
   // Tăng số lượng (mũi tên lên ▲)
   const handleQuantityIncrease = () => {
-    setFormQuantity((prev) => (prev > 0 ? prev + 1 : 1));
+    const cur = parseInt(formQuantity, 10) || 0;
+    setFormQuantity((cur + 1).toString());
   };
 
   // Giảm số lượng (mũi tên xuống ▼)
   const handleQuantityDecrease = () => {
-    setFormQuantity((prev) => Math.max(1, prev - 1));
+    const cur = parseInt(formQuantity, 10) || 0;
+    setFormQuantity(Math.max(0, cur - 1).toString());
   };
 
-  // Nhập số lượng từ bàn phím
+  // Nhập số lượng từ bàn phím: Cho phép xóa rỗng để gõ số mới (2, 3...), không bị dính số cũ
   const handleQuantityChange = (text: string) => {
     const clean = text.replace(/[^0-9]/g, '');
-    if (!clean) {
-      setFormQuantity(1);
-    } else {
-      const val = parseInt(clean, 10);
-      setFormQuantity(val > 0 ? val : 1);
+    if (clean === '') {
+      setFormQuantity('');
+      return;
+    }
+    const val = parseInt(clean, 10);
+    setFormQuantity(val.toString());
+  };
+
+  // Khi rời ô nhập số lượng, nếu để trống thì tự đặt lại là '0'
+  const handleQuantityBlur = () => {
+    if (!formQuantity || formQuantity.trim() === '') {
+      setFormQuantity('0');
     }
   };
 
@@ -205,8 +214,9 @@ export const RevenueDetailScreen: React.FC<RevenueDetailScreenProps> = ({ onBack
       return;
     }
 
-    if (formQuantity <= 0) {
-      Alert.alert('Lỗi nhập liệu', 'Số lượng phải lớn hơn 0');
+    const qty = parseInt(formQuantity, 10) || 0;
+    if (qty <= 0) {
+      Alert.alert('Lỗi nhập liệu', 'Vui lòng nhập số lượng lớn hơn 0');
       return;
     }
 
@@ -230,7 +240,7 @@ export const RevenueDetailScreen: React.FC<RevenueDetailScreenProps> = ({ onBack
       const payload: CreateRevenuePayload = {
         customerName: formCustomerName.trim(),
         productName: formProductName.trim(),
-        quantity: formQuantity,
+        quantity: qty,
         unitPrice: parsedUnitPrice,
         amount: computedTotalAmount,
         isRetailCustomer: formIsRetailCustomer,
@@ -736,28 +746,35 @@ export const RevenueDetailScreen: React.FC<RevenueDetailScreenProps> = ({ onBack
           <View style={styles.createModalCard}>
             {/* Header Modal */}
             <View style={styles.modalHeaderRow}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+              <View style={styles.createModalHeaderLeft}>
                 <View style={styles.createIconBadge}>
                   <Ionicons name="cart" size={18} color="#047857" />
                 </View>
-                <View>
-                  <Text style={styles.modalTitle}>Tạo mới đơn bán hàng</Text>
-                  <Text style={styles.modalSubTitle}>Ghi nhận chi tiết đơn doanh thu</Text>
+                <View style={styles.createModalTitleWrap}>
+                  <Text style={styles.modalTitle} numberOfLines={1}>
+                    Tạo mới đơn hàng
+                  </Text>
+                  <Text style={styles.modalSubTitle} numberOfLines={1}>
+                    Ghi nhận chi tiết đơn doanh thu
+                  </Text>
                 </View>
               </View>
 
-              {/* Huy hiệu STT tự nhảy đến số tiếp theo */}
-              <View style={styles.sttBadgeContainer}>
-                <Text style={styles.sttBadgeLabel}>STT ĐƠN</Text>
-                <Text style={styles.sttBadgeNumber}>{nextSttFormatted}</Text>
-              </View>
+              <View style={styles.createModalHeaderRight}>
+                {/* Huy hiệu STT tự nhảy đến số tiếp theo */}
+                <View style={styles.sttBadgeContainer}>
+                  <Text style={styles.sttBadgeLabel}>STT ĐƠN</Text>
+                  <Text style={styles.sttBadgeNumber}>{nextSttFormatted}</Text>
+                </View>
 
-              <TouchableOpacity
-                onPress={() => setShowCreateModal(false)}
-                style={{ marginLeft: 8, padding: 4 }}
-              >
-                <Ionicons name="close" size={24} color="#64748B" />
-              </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => setShowCreateModal(false)}
+                  style={styles.createModalCloseBtn}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Ionicons name="close" size={22} color="#64748B" />
+                </TouchableOpacity>
+              </View>
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 520 }}>
@@ -903,9 +920,11 @@ export const RevenueDetailScreen: React.FC<RevenueDetailScreenProps> = ({ onBack
                     <TextInput
                       style={styles.stepperInput}
                       keyboardType="numeric"
-                      value={formQuantity.toString()}
+                      value={formQuantity}
                       onChangeText={handleQuantityChange}
+                      onBlur={handleQuantityBlur}
                       textAlign="center"
+                      selectTextOnFocus={true}
                     />
 
                     <TouchableOpacity
@@ -1100,7 +1119,7 @@ export const RevenueDetailScreen: React.FC<RevenueDetailScreenProps> = ({ onBack
                       {formProductName || '-'}
                     </Text>
                     <Text style={[styles.miniDataCell, { width: 28, fontWeight: '700' }]}>
-                      {formQuantity}
+                      {formQuantity || '0'}
                     </Text>
                     <Text style={[styles.miniDataCell, { flex: 1.1 }]}>
                       {formUnitPrice || '0'}
@@ -1760,7 +1779,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   modalTitle: {
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: '700',
     color: '#0F172A',
   },
@@ -2026,6 +2045,28 @@ const styles = StyleSheet.create({
     opacity: 0.85,
   },
 
+  createModalHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    minWidth: 0,
+    marginRight: 8,
+  },
+  createModalTitleWrap: {
+    flex: 1,
+    minWidth: 0,
+  },
+  createModalHeaderRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flexShrink: 0,
+  },
+  createModalCloseBtn: {
+    padding: 4,
+    marginLeft: 2,
+  },
+
   // Huy hiệu STT tự nhảy
   sttBadgeContainer: {
     alignItems: 'center',
@@ -2034,18 +2075,22 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#A7F3D0',
     borderRadius: 8,
-    paddingVertical: 3,
-    paddingHorizontal: 8,
+    paddingVertical: 2,
+    paddingHorizontal: 7,
+    minWidth: 46,
+    flexShrink: 0,
   },
   sttBadgeLabel: {
-    fontSize: 8.5,
+    fontSize: 8,
     fontWeight: '700',
     color: '#059669',
+    lineHeight: 10,
   },
   sttBadgeNumber: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '800',
     color: '#047857',
+    lineHeight: 16,
   },
   modalSubTitle: {
     fontSize: 11,
@@ -2246,13 +2291,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#E2E8F0',
+    flexShrink: 0,
   },
   stepperInput: {
     flex: 1,
+    minWidth: 0,
+    width: 0,
     fontSize: 15,
     fontWeight: '700',
     color: '#0F172A',
     paddingVertical: 6,
+    paddingHorizontal: 2,
+    textAlign: 'center',
   },
 
   // Thẻ thành tiền
