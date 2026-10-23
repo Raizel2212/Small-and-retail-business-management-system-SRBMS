@@ -29,7 +29,7 @@ public class CreateRevenueRequest {
     private String productName;
 
     @Builder.Default
-    private Integer quantity = 1;
+    private Integer quantity = 0;
 
     private BigDecimal unitPrice;
 

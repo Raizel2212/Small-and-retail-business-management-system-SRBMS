@@ -40,7 +40,7 @@ CREATE TABLE IF NOT EXISTS revenue_transactions (
     customer_name VARCHAR(255) NOT NULL,
     amount NUMERIC(15, 2) NOT NULL,
     product_name VARCHAR(255),
-    quantity INT DEFAULT 1,
+    quantity INT DEFAULT 0,
     unit_price NUMERIC(15, 2),
     is_retail_customer BOOLEAN DEFAULT FALSE,
     payment_method VARCHAR(50) NOT NULL DEFAULT 'TIEN_MAT',
