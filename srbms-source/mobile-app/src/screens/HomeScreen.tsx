@@ -11,28 +11,28 @@ import {
   TextInput,
   Platform,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { BrandLogo } from '../components/BrandLogo';
-import { ServerConfigModal } from '../components/ServerConfigModal';
 
-type BottomTabType = 'home' | 'search' | 'camera' | 'profile' | 'settings';
+type BottomTabType = 'home' | 'search' | 'camera' | 'tax' | 'settings';
 
 export interface HomeScreenProps {
   onNavigateToRevenueDetail?: () => void;
 }
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigateToRevenueDetail }) => {
-  const { user, token, logout, baseUrl, updateBaseUrl } = useAuth();
+  const { user, token, logout } = useAuth();
 
   const [activeTab, setActiveTab] = useState<BottomTabType>('home');
   const [showNotificationModal, setShowNotificationModal] = useState(false);
-  const [showServerConfig, setShowServerConfig] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [periodFilter, setPeriodFilter] = useState<'month' | 'quarter' | 'year'>('month');
+  const [taxFilter, setTaxFilter] = useState<'all' | 'groups' | 'rates' | 'laws' | 'deadlines'>('all');
 
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
@@ -432,10 +432,429 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigateToRevenueDetai
     </View>
   );
 
-  // Render tab "Profile"
-  const renderProfileContent = () => (
+  // Render tab "Luật thuế" (Tra cứu chính sách thuế cho Hộ kinh doanh)
+  const renderTaxLawContent = () => (
     <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-      {/* Profile Card */}
+      {/* 1. Header Tra cứu & Cẩm nang */}
+      <View style={styles.taxHeaderHero}>
+        <View style={styles.taxHeroIconCircle}>
+          <Ionicons name="scale" size={26} color="#1E56A0" />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.taxHeroTitle}>Cẩm nang & Tra cứu Luật Thuế</Text>
+          <Text style={styles.taxHeroSubtitle}>
+            Quy định mới nhất cho Hộ kinh doanh & Cá nhân kinh doanh
+          </Text>
+        </View>
+      </View>
+
+      {/* 2. Banner chính sách thuế áp dụng cho hộ của người dùng */}
+      <View style={styles.taxPersonalCard}>
+        <View style={styles.taxPersonalHeader}>
+          <View style={styles.taxPersonalIconBox}>
+            <Ionicons name="shield-checkmark" size={22} color="#059669" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.taxPersonalSub}>Chính sách áp dụng cho hộ của bạn</Text>
+            <Text style={styles.taxPersonalTitle}>
+              Hộ KD Nhóm {user?.businessGroup || 1} • {user?.businessType || 'Thương mại'}
+            </Text>
+          </View>
+        </View>
+        <View style={styles.taxPersonalBody}>
+          {user?.businessGroup === 2 ? (
+            <>
+              <View style={styles.taxCheckRow}>
+                <Ionicons name="checkmark-circle" size={16} color="#2563EB" />
+                <Text style={styles.taxCheckText}>
+                  Nộp thuế theo phương pháp khoán hoặc tỷ lệ % trên doanh thu thực tế.
+                </Text>
+              </View>
+              <View style={styles.taxCheckRow}>
+                <Ionicons name="checkmark-circle" size={16} color="#2563EB" />
+                <Text style={styles.taxCheckText}>
+                  Lệ phí môn bài: 300.000 VNĐ/năm (mức doanh thu 100 - 300 triệu VNĐ/năm).
+                </Text>
+              </View>
+              <View style={styles.taxCheckRow}>
+                <Ionicons name="checkmark-circle" size={16} color="#2563EB" />
+                <Text style={styles.taxCheckText}>
+                  Thuế suất tham chiếu: 1.5% (Thương mại) hoặc 7% (Dịch vụ, ăn uống).
+                </Text>
+              </View>
+            </>
+          ) : user?.businessGroup === 3 ? (
+            <>
+              <View style={styles.taxCheckRow}>
+                <Ionicons name="checkmark-circle" size={16} color="#7C3AED" />
+                <Text style={styles.taxCheckText}>
+                  Kê khai thuế theo tháng hoặc quý (Thông tư 40/2021/TT-BTC).
+                </Text>
+              </View>
+              <View style={styles.taxCheckRow}>
+                <Ionicons name="checkmark-circle" size={16} color="#7C3AED" />
+                <Text style={styles.taxCheckText}>
+                  Bắt buộc áp dụng 7 mẫu chứng từ kế toán theo Thông tư 88/2021/TT-BTC.
+                </Text>
+              </View>
+              <View style={styles.taxCheckRow}>
+                <Ionicons name="checkmark-circle" size={16} color="#7C3AED" />
+                <Text style={styles.taxCheckText}>
+                  Bắt buộc sử dụng Hóa đơn điện tử có mã CQT (Nghị định 123/2020/NĐ-CP).
+                </Text>
+              </View>
+            </>
+          ) : (
+            <>
+              <View style={styles.taxCheckRow}>
+                <Ionicons name="checkmark-circle" size={16} color="#059669" />
+                <Text style={styles.taxCheckText}>
+                  Miễn thuế GTGT & TNCN nếu doanh thu dưới 100 triệu VNĐ/năm (Điều 4 TT 40/2021).
+                </Text>
+              </View>
+              <View style={styles.taxCheckRow}>
+                <Ionicons name="checkmark-circle" size={16} color="#059669" />
+                <Text style={styles.taxCheckText}>
+                  Miễn Lệ phí môn bài theo Nghị định 22/2020/NĐ-CP và NĐ 139/2016/NĐ-CP.
+                </Text>
+              </View>
+              <View style={styles.taxCheckRow}>
+                <Ionicons name="checkmark-circle" size={16} color="#059669" />
+                <Text style={styles.taxCheckText}>
+                  Chế độ sổ sách đơn giản: Theo dõi Doanh thu, Chi phí và Tổng hợp tồn kho.
+                </Text>
+              </View>
+            </>
+          )}
+        </View>
+      </View>
+
+      {/* 3. Thanh lọc chủ đề */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.taxFilterScrollView}
+        contentContainerStyle={styles.taxFilterRow}
+      >
+        {[
+          { key: 'all', label: 'Tất cả' },
+          { key: 'groups', label: '3 Nhóm Hộ KD' },
+          { key: 'rates', label: 'Biểu thuế suất' },
+          { key: 'laws', label: 'Văn bản luật' },
+          { key: 'deadlines', label: 'Lịch nộp thuế' },
+        ].map((item) => {
+          const isActive = taxFilter === item.key;
+          return (
+            <TouchableOpacity
+              key={item.key}
+              style={[styles.taxFilterChip, isActive && styles.taxFilterChipActive]}
+              onPress={() => setTaxFilter(item.key as any)}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.taxFilterChipText, isActive && styles.taxFilterChipTextActive]}>
+                {item.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
+
+      {/* 4. Nhóm Hộ Kinh Doanh (Hiện khi chọn 'all' hoặc 'groups') */}
+      {(taxFilter === 'all' || taxFilter === 'groups') && (
+        <View style={styles.taxSectionWrapper}>
+          <Text style={styles.taxSectionMainTitle}>Phân loại 3 Nhóm Quản lý Thuế</Text>
+
+          {/* Nhóm 1 */}
+          <View style={[styles.taxLawCard, { borderLeftColor: '#059669', borderLeftWidth: 4 }]}>
+            <View style={styles.taxLawCardHeader}>
+              <View style={[styles.taxLawBadge, { backgroundColor: '#ECFDF5' }]}>
+                <Text style={[styles.taxLawBadgeText, { color: '#059669' }]}>Nhóm 1 • Dưới 100 tr/năm</Text>
+              </View>
+              <Ionicons name="shield-checkmark-outline" size={20} color="#059669" />
+            </View>
+            <Text style={styles.taxLawTitle}>Miễn thuế GTGT & Thuế TNCN</Text>
+            <Text style={styles.taxLawSub}>
+              Cá nhân, hộ kinh doanh có doanh thu trong năm dương lịch từ 100 triệu đồng trở xuống không phải nộp thuế GTGT và không phải nộp thuế TNCN (Khoản 2 Điều 4 Thông tư 40/2021/TT-BTC).
+            </Text>
+            <View style={styles.taxRateBox}>
+              <View style={styles.taxRateRow}>
+                <Text style={styles.taxRateLabel}>• Lệ phí môn bài:</Text>
+                <Text style={[styles.taxRateVal, { color: '#059669' }]}>Được miễn hoàn toàn</Text>
+              </View>
+              <View style={styles.taxRateRow}>
+                <Text style={styles.taxRateLabel}>• Thuế GTGT + TNCN:</Text>
+                <Text style={[styles.taxRateVal, { color: '#059669' }]}>0 VNĐ</Text>
+              </View>
+              <View style={styles.taxRateRow}>
+                <Text style={styles.taxRateLabel}>• Sổ sách kế toán:</Text>
+                <Text style={styles.taxRateVal}>Sổ thu chi đơn giản</Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Nhóm 2 */}
+          <View style={[styles.taxLawCard, { borderLeftColor: '#2563EB', borderLeftWidth: 4 }]}>
+            <View style={styles.taxLawCardHeader}>
+              <View style={[styles.taxLawBadge, { backgroundColor: '#EFF6FF' }]}>
+                <Text style={[styles.taxLawBadgeText, { color: '#2563EB' }]}>Nhóm 2 • Từ 100 - 300 tr/năm</Text>
+              </View>
+              <Ionicons name="calculator-outline" size={20} color="#2563EB" />
+            </View>
+            <Text style={styles.taxLawTitle}>Thuế khoán & Tỷ lệ % Doanh thu</Text>
+            <Text style={styles.taxLawSub}>
+              Áp dụng phương pháp khoán định kỳ hoặc nộp theo tỷ lệ % doanh thu thực tế phát sinh. Chi cục Thuế địa phương thông báo mức thuế khoán hàng năm.
+            </Text>
+            <View style={styles.taxRateBox}>
+              <View style={styles.taxRateRow}>
+                <Text style={styles.taxRateLabel}>• Lệ phí môn bài:</Text>
+                <Text style={styles.taxRateVal}>300.000 VNĐ / năm</Text>
+              </View>
+              <View style={styles.taxRateRow}>
+                <Text style={styles.taxRateLabel}>• Thuế Thương mại (bán lẻ):</Text>
+                <Text style={[styles.taxRateVal, { color: '#2563EB' }]}>1.5% DT (1% GTGT + 0.5% TNCN)</Text>
+              </View>
+              <View style={styles.taxRateRow}>
+                <Text style={styles.taxRateLabel}>• Thuế Dịch vụ ăn uống:</Text>
+                <Text style={[styles.taxRateVal, { color: '#2563EB' }]}>7.0% DT (5% GTGT + 2% TNCN)</Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Nhóm 3 */}
+          <View style={[styles.taxLawCard, { borderLeftColor: '#7C3AED', borderLeftWidth: 4 }]}>
+            <View style={styles.taxLawCardHeader}>
+              <View style={[styles.taxLawBadge, { backgroundColor: '#F5F3FF' }]}>
+                <Text style={[styles.taxLawBadgeText, { color: '#7C3AED' }]}>Nhóm 3 • Trên 300 tr/năm</Text>
+              </View>
+              <Ionicons name="receipt-outline" size={20} color="#7C3AED" />
+            </View>
+            <Text style={styles.taxLawTitle}>Phương pháp Kê khai & Hóa đơn điện tử</Text>
+            <Text style={styles.taxLawSub}>
+              Hộ kinh doanh quy mô lớn bắt buộc thực hiện chế độ kế toán theo Thông tư 88/2021/TT-BTC, sử dụng Hóa đơn điện tử theo Nghị định 123/2020/NĐ-CP và kê khai theo quý/tháng.
+            </Text>
+            <View style={styles.taxRateBox}>
+              <View style={styles.taxRateRow}>
+                <Text style={styles.taxRateLabel}>• Lệ phí môn bài:</Text>
+                <Text style={styles.taxRateVal}>500.000 - 1.000.000 VNĐ/năm</Text>
+              </View>
+              <View style={styles.taxRateRow}>
+                <Text style={styles.taxRateLabel}>• Hóa đơn chứng từ:</Text>
+                <Text style={[styles.taxRateVal, { color: '#7C3AED' }]}>Bắt buộc HĐĐT có mã CQT</Text>
+              </View>
+              <View style={styles.taxRateRow}>
+                <Text style={styles.taxRateLabel}>• Kỳ kê khai:</Text>
+                <Text style={styles.taxRateVal}>Định kỳ theo Tháng hoặc Quý</Text>
+              </View>
+            </View>
+          </View>
+        </View>
+      )}
+
+      {/* 5. Biểu thuế suất theo ngành nghề (Hiện khi chọn 'all' hoặc 'rates') */}
+      {(taxFilter === 'all' || taxFilter === 'rates') && (
+        <View style={styles.taxSectionWrapper}>
+          <Text style={styles.taxSectionMainTitle}>Biểu Tỷ lệ Thuế tính trên Doanh thu</Text>
+          <Text style={styles.taxSectionSubTitle}>
+            Căn cứ Phụ lục I - Danh mục ngành nghề tính thuế (Ban hành kèm Thông tư 40/2021/TT-BTC)
+          </Text>
+
+          <View style={styles.sectionCard}>
+            {/* Hàng 1: Thương mại */}
+            <View style={styles.taxRateSectorItem}>
+              <View style={styles.taxRateSectorLeft}>
+                <Ionicons name="cart-outline" size={20} color="#1E56A0" />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.taxRateSectorName}>Phân phối, cung cấp buôn/lẻ hàng hóa</Text>
+                  <Text style={styles.taxRateSectorSub}>Bán lẻ, tạp hóa, thời trang, vật tư (1% GTGT + 0.5% TNCN)</Text>
+                </View>
+              </View>
+              <View style={styles.taxRateSectorBadge}>
+                <Text style={styles.taxRateSectorBadgeText}>1.5%</Text>
+              </View>
+            </View>
+            <View style={styles.divider} />
+
+            {/* Hàng 2: Dịch vụ & Ăn uống */}
+            <View style={styles.taxRateSectorItem}>
+              <View style={styles.taxRateSectorLeft}>
+                <Ionicons name="restaurant-outline" size={20} color="#D97706" />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.taxRateSectorName}>Dịch vụ, ăn uống, nhà hàng, lưu trú</Text>
+                  <Text style={styles.taxRateSectorSub}>Quán ăn, cafe, khách sạn, làm đẹp (5% GTGT + 2% TNCN)</Text>
+                </View>
+              </View>
+              <View style={[styles.taxRateSectorBadge, { backgroundColor: '#FEF3C7' }]}>
+                <Text style={[styles.taxRateSectorBadgeText, { color: '#B45309' }]}>7.0%</Text>
+              </View>
+            </View>
+            <View style={styles.divider} />
+
+            {/* Hàng 3: Sản xuất */}
+            <View style={styles.taxRateSectorItem}>
+              <View style={styles.taxRateSectorLeft}>
+                <Ionicons name="hammer-outline" size={20} color="#059669" />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.taxRateSectorName}>Sản xuất, gia công, vận tải hàng hóa</Text>
+                  <Text style={styles.taxRateSectorSub}>Xưởng cơ khí, chế biến, chở hàng (3% GTGT + 1.5% TNCN)</Text>
+                </View>
+              </View>
+              <View style={[styles.taxRateSectorBadge, { backgroundColor: '#ECFDF5' }]}>
+                <Text style={[styles.taxRateSectorBadgeText, { color: '#059669' }]}>4.5%</Text>
+              </View>
+            </View>
+            <View style={styles.divider} />
+
+            {/* Hàng 4: Cho thuê tài sản */}
+            <View style={styles.taxRateSectorItem}>
+              <View style={styles.taxRateSectorLeft}>
+                <Ionicons name="key-outline" size={20} color="#7C3AED" />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.taxRateSectorName}>Cho thuê tài sản (nhà, đất, xe máy móc)</Text>
+                  <Text style={styles.taxRateSectorSub}>Cho thuê mặt bằng kinh doanh (5% GTGT + 5% TNCN)</Text>
+                </View>
+              </View>
+              <View style={[styles.taxRateSectorBadge, { backgroundColor: '#F5F3FF' }]}>
+                <Text style={[styles.taxRateSectorBadgeText, { color: '#7C3AED' }]}>10.0%</Text>
+              </View>
+            </View>
+            <View style={styles.divider} />
+
+            {/* Hàng 5: Hoạt động khác */}
+            <View style={styles.taxRateSectorItem}>
+              <View style={styles.taxRateSectorLeft}>
+                <Ionicons name="grid-outline" size={20} color="#64748B" />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.taxRateSectorName}>Hoạt động kinh doanh khác</Text>
+                  <Text style={styles.taxRateSectorSub}>Các ngành nghề ngoài danh mục (2% GTGT + 1% TNCN)</Text>
+                </View>
+              </View>
+              <View style={[styles.taxRateSectorBadge, { backgroundColor: '#F1F5F9' }]}>
+                <Text style={[styles.taxRateSectorBadgeText, { color: '#475569' }]}>3.0%</Text>
+              </View>
+            </View>
+          </View>
+        </View>
+      )}
+
+      {/* 6. Văn bản pháp luật cốt lõi (Hiện khi chọn 'all' hoặc 'laws') */}
+      {(taxFilter === 'all' || taxFilter === 'laws') && (
+        <View style={styles.taxSectionWrapper}>
+          <Text style={styles.taxSectionMainTitle}>Văn bản Pháp luật Hiện hành</Text>
+
+          <View style={styles.sectionCard}>
+            <View style={styles.taxDocItem}>
+              <View style={styles.taxDocIcon}>
+                <Ionicons name="document-text" size={18} color="#1E56A0" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.taxDocName}>Thông tư 40/2021/TT-BTC</Text>
+                <Text style={styles.taxDocDesc}>
+                  Hướng dẫn thuế GTGT, TNCN và quản lý thuế đối với hộ kinh doanh, cá nhân kinh doanh của Bộ Tài chính.
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.taxDocItem}>
+              <View style={[styles.taxDocIcon, { backgroundColor: '#ECFDF5' }]}>
+                <Ionicons name="book" size={18} color="#059669" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.taxDocName}>Thông tư 88/2021/TT-BTC</Text>
+                <Text style={styles.taxDocDesc}>
+                  Quy định chế độ kế toán cho hộ kinh doanh, bao gồm hệ thống chứng từ và mẫu biểu sổ sách ghi nhận.
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.taxDocItem}>
+              <View style={[styles.taxDocIcon, { backgroundColor: '#F5F3FF' }]}>
+                <Ionicons name="receipt" size={18} color="#7C3AED" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.taxDocName}>Nghị định 123/2020/NĐ-CP</Text>
+                <Text style={styles.taxDocDesc}>
+                  Quy định chi tiết về hóa đơn điện tử, chứng từ và xử lý hóa đơn khởi tạo từ máy tính tiền.
+                </Text>
+              </View>
+            </View>
+
+            <View style={[styles.taxDocItem, { borderBottomWidth: 0 }]}>
+              <View style={[styles.taxDocIcon, { backgroundColor: '#FEF3C7' }]}>
+                <Ionicons name="shield-outline" size={18} color="#D97706" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.taxDocName}>Nghị định 22/2020/NĐ-CP</Text>
+                <Text style={styles.taxDocDesc}>
+                  Sửa đổi bổ sung một số điều về lệ phí môn bài; miễn lệ phí môn bài trong năm đầu thành lập.
+                </Text>
+              </View>
+            </View>
+          </View>
+        </View>
+      )}
+
+      {/* 7. Lịch nộp thuế & Kỳ kê khai (Hiện khi chọn 'all' hoặc 'deadlines') */}
+      {(taxFilter === 'all' || taxFilter === 'deadlines') && (
+        <View style={styles.taxSectionWrapper}>
+          <Text style={styles.taxSectionMainTitle}>Lịch & Hạn Kê khai Nộp Thuế</Text>
+
+          <View style={styles.taxDeadlineCard}>
+            <View style={styles.taxDeadlineHeader}>
+              <Ionicons name="alarm-outline" size={20} color="#B45309" />
+              <Text style={styles.taxDeadlineTitle}>Thời hạn quan trọng trong năm</Text>
+            </View>
+            <View style={styles.taxDeadlineRow}>
+              <Text style={styles.taxDeadlineLabel}>Lệ phí môn bài hàng năm:</Text>
+              <Text style={styles.taxDeadlineDate}>Chậm nhất 30/01</Text>
+            </View>
+            <View style={styles.taxDeadlineRow}>
+              <Text style={styles.taxDeadlineLabel}>Tờ khai Thuế Quý 1:</Text>
+              <Text style={styles.taxDeadlineDate}>Chậm nhất 30/04</Text>
+            </View>
+            <View style={styles.taxDeadlineRow}>
+              <Text style={styles.taxDeadlineLabel}>Tờ khai Thuế Quý 2:</Text>
+              <Text style={styles.taxDeadlineDate}>Chậm nhất 31/07</Text>
+            </View>
+            <View style={styles.taxDeadlineRow}>
+              <Text style={styles.taxDeadlineLabel}>Tờ khai Thuế Quý 3:</Text>
+              <Text style={styles.taxDeadlineDate}>Chậm nhất 31/10</Text>
+            </View>
+            <View style={[styles.taxDeadlineRow, { borderBottomWidth: 0 }]}>
+              <Text style={styles.taxDeadlineLabel}>Tờ khai Thuế Quý 4:</Text>
+              <Text style={styles.taxDeadlineDate}>Chậm nhất 31/01 năm sau</Text>
+            </View>
+          </View>
+        </View>
+      )}
+
+      {/* 8. Câu hỏi thường gặp */}
+      <View style={styles.taxSectionWrapper}>
+        <Text style={styles.taxSectionMainTitle}>Câu hỏi thường gặp (FAQ)</Text>
+
+        <View style={styles.sectionCard}>
+          <View style={styles.taxFaqItem}>
+            <Text style={styles.taxFaqQ}>❓ Hộ kinh doanh mới thành lập có được miễn lệ phí môn bài?</Text>
+            <Text style={styles.taxFaqA}>
+              Có. Theo Nghị định 22/2020/NĐ-CP, cá nhân, nhóm cá nhân, hộ gia đình hoạt động sản xuất, kinh doanh lần đầu được miễn lệ phí môn bài trong năm đầu tiên.
+            </Text>
+          </View>
+          <View style={styles.divider} />
+
+          <View style={styles.taxFaqItem}>
+            <Text style={styles.taxFaqQ}>❓ Doanh thu dưới 100 triệu có phải nộp tờ khai quý không?</Text>
+            <Text style={styles.taxFaqA}>
+              Hộ kinh doanh thuộc Nhóm 1 (dưới 100 triệu/năm) được miễn thuế GTGT và TNCN. Việc theo dõi doanh thu chi phí trên ứng dụng SRBMS giúp minh bạch doanh thu khi cơ quan thuế rà soát định kỳ.
+            </Text>
+          </View>
+        </View>
+      </View>
+    </ScrollView>
+  );
+
+  // Render tab "Cài đặt" (Bao gồm Thông tin Profile người dùng, Hộ kinh doanh & Cài đặt hệ thống)
+  const renderSettingContent = () => (
+    <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      {/* 1. Header Profile Card */}
       <View style={styles.profileCard}>
         <View style={styles.avatarCircle}>
           <Text style={styles.avatarText}>
@@ -457,7 +876,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigateToRevenueDetai
         </View>
       </View>
 
-      {/* Thông tin Hộ kinh doanh */}
+      {/* 2. Thông tin Hộ kinh doanh */}
       <View style={styles.sectionCard}>
         <View style={styles.sectionHeader}>
           <Ionicons name="business-outline" size={20} color="#1E56A0" />
@@ -492,7 +911,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigateToRevenueDetai
         ) : null}
       </View>
 
-      {/* Thông tin liên hệ & định danh */}
+      {/* 3. Thông tin liên hệ & định danh */}
       <View style={styles.sectionCard}>
         <View style={styles.sectionHeader}>
           <Ionicons name="id-card-outline" size={20} color="#1E56A0" />
@@ -514,7 +933,24 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigateToRevenueDetai
         </View>
       </View>
 
-      {/* Nút Đăng xuất tài khoản trong Profile */}
+      {/* 4. Thông tin ứng dụng */}
+      <View style={styles.sectionCard}>
+        <View style={styles.sectionHeader}>
+          <Ionicons name="information-circle-outline" size={20} color="#1E56A0" />
+          <Text style={styles.sectionTitle}>Thông tin ứng dụng</Text>
+        </View>
+        <View style={styles.infoRow}>
+          <Text style={styles.infoLabel}>Phiên bản phần mềm:</Text>
+          <Text style={styles.infoValue}>1.0.0 (Release 2026)</Text>
+        </View>
+        <View style={styles.divider} />
+        <View style={styles.infoRow}>
+          <Text style={styles.infoLabel}>Hệ thống:</Text>
+          <Text style={styles.infoValue}>SRBMS - Quản lý Hộ Kinh Doanh</Text>
+        </View>
+      </View>
+
+      {/* 5. Nút Đăng xuất tài khoản */}
       <TouchableOpacity
         style={styles.profileLogoutBtn}
         onPress={handleLogout}
@@ -532,60 +968,40 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigateToRevenueDetai
     </ScrollView>
   );
 
-  // Render tab "Setting"
-  const renderSettingContent = () => (
-    <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-      <View style={styles.sectionCard}>
-        <View style={styles.sectionHeader}>
-          <Ionicons name="server-outline" size={20} color="#1E56A0" />
-          <Text style={styles.sectionTitle}>Cấu hình kết nối Backend</Text>
-        </View>
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Địa chỉ API Server:</Text>
-          <Text style={styles.infoValueBold}>{baseUrl}</Text>
-        </View>
-        <TouchableOpacity
-          style={styles.settingActionBtn}
-          onPress={() => setShowServerConfig(true)}
-        >
-          <Ionicons name="pencil" size={16} color="#1E56A0" />
-          <Text style={styles.settingActionBtnText}>Đổi địa chỉ Server Backend</Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.sectionCard}>
-        <View style={styles.sectionHeader}>
-          <Ionicons name="information-circle-outline" size={20} color="#1E56A0" />
-          <Text style={styles.sectionTitle}>Thông tin ứng dụng</Text>
-        </View>
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Phiên bản phần mềm:</Text>
-          <Text style={styles.infoValue}>1.0.0 (Release 2026)</Text>
-        </View>
-        <View style={styles.divider} />
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Hệ thống:</Text>
-          <Text style={styles.infoValue}>SRBMS - Quản lý Hộ Kinh Doanh</Text>
-        </View>
-      </View>
-    </ScrollView>
-  );
-
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar style="dark" />
 
+      {/* Watermark Background Trống đồng Đông Sơn & Bản đồ Việt Nam mờ nhẹ toàn bộ nền */}
+      <View style={styles.backgroundWatermarkBox} pointerEvents="none">
+        <Image
+          source={require('../../assets/trong_dong_map_bg.png')}
+          style={styles.backgroundWatermark}
+          resizeMode="cover"
+        />
+      </View>
+
+      {/* ======================================================== */}
       {/* ======================================================== */}
       {/* HEADER:
-          - Tên user ở góc trên cùng bên trái
-          - Ở giữa là Logo của App
+          - Logo ở góc trên cùng bên trái
+          - Tên user và lời chào ở giữa (hiển thị đầy đủ họ tên)
           - Bên phải là Icon chuông thông báo
       {/* ======================================================== */}
       <View style={styles.headerBar}>
-        {/* Góc trên cùng bên trái: Tên User (Chạm để tới Profile) */}
+        {/* Góc trên cùng bên trái: Logo của App */}
         <TouchableOpacity
-          style={styles.headerLeftUser}
-          onPress={() => setActiveTab('profile')}
+          style={styles.headerLeftLogo}
+          onPress={() => setActiveTab('home')}
+          activeOpacity={0.7}
+        >
+          <BrandLogo size={36} showText={false} />
+        </TouchableOpacity>
+
+        {/* Ở giữa: Lời chào và Tên User (Chạm để tới Cài đặt & Profile) */}
+        <TouchableOpacity
+          style={styles.headerCenterUser}
+          onPress={() => setActiveTab('settings')}
           activeOpacity={0.7}
         >
           <View style={styles.userMiniAvatar}>
@@ -600,11 +1016,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigateToRevenueDetai
             </Text>
           </View>
         </TouchableOpacity>
-
-        {/* Ở giữa: Logo của App */}
-        <View style={styles.headerCenterLogo}>
-          <BrandLogo size={36} showText={false} />
-        </View>
 
         {/* Bên phải: Icon chuông thông báo */}
         <View style={styles.headerRightActions}>
@@ -626,13 +1037,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigateToRevenueDetai
         {activeTab === 'home' && renderHomeContent()}
         {activeTab === 'search' && renderSearchContent()}
         {activeTab === 'camera' && renderCameraContent()}
-        {activeTab === 'profile' && renderProfileContent()}
+        {activeTab === 'tax' && renderTaxLawContent()}
         {activeTab === 'settings' && renderSettingContent()}
       </View>
 
       {/* ======================================================== */}
       {/* BOTTOM NAVIGATION:
-          Icon từ trái sang phải: Trang chủ, Tìm kiếm, Chụp ảnh, Profile, Setting
+          Icon từ trái sang phải: Trang chủ, Tìm kiếm, Chụp ảnh, Luật thuế, Cài đặt
       {/* ======================================================== */}
       <View style={styles.bottomNav}>
         {/* 1. Trang chủ */}
@@ -701,28 +1112,28 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigateToRevenueDetai
           </Text>
         </TouchableOpacity>
 
-        {/* 4. Profile */}
+        {/* 4. Luật thuế */}
         <TouchableOpacity
           style={styles.navItem}
-          onPress={() => setActiveTab('profile')}
+          onPress={() => setActiveTab('tax')}
           activeOpacity={0.7}
         >
           <Ionicons
-            name={activeTab === 'profile' ? 'person' : 'person-outline'}
+            name={activeTab === 'tax' ? 'scale' : 'scale-outline'}
             size={24}
-            color={activeTab === 'profile' ? '#1E56A0' : '#94A3B8'}
+            color={activeTab === 'tax' ? '#1E56A0' : '#94A3B8'}
           />
           <Text
             style={[
               styles.navLabel,
-              activeTab === 'profile' && styles.navLabelActive,
+              activeTab === 'tax' && styles.navLabelActive,
             ]}
           >
-            Profile
+            Luật thuế
           </Text>
         </TouchableOpacity>
 
-        {/* 5. Setting */}
+        {/* 5. Cài đặt */}
         <TouchableOpacity
           style={styles.navItem}
           onPress={() => setActiveTab('settings')}
@@ -739,7 +1150,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigateToRevenueDetai
               activeTab === 'settings' && styles.navLabelActive,
             ]}
           >
-            Setting
+            Cài đặt
           </Text>
         </TouchableOpacity>
       </View>
@@ -861,14 +1272,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigateToRevenueDetai
           </View>
         </View>
       </Modal>
-
-      {/* Modal Cấu hình Server */}
-      <ServerConfigModal
-        visible={showServerConfig}
-        onClose={() => setShowServerConfig(false)}
-        currentUrl={baseUrl}
-        onSave={updateBaseUrl}
-      />
     </SafeAreaView>
   );
 };
@@ -877,21 +1280,44 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: '#F8FAFC',
+    position: 'relative',
+  },
+  backgroundWatermarkBox: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 0,
+    pointerEvents: 'none',
+  },
+  backgroundWatermark: {
+    width: '100%',
+    height: '100%',
+    opacity: 0.28, // Mờ nhẹ nhàng, không bị chói mắt, đọc rõ từng chữ và số
   },
   headerBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 10,
-    backgroundColor: '#FFFFFF',
+    paddingTop: Platform.OS === 'web' ? 42 : 12,
+    paddingBottom: 10,
+    backgroundColor: 'transparent', // 100% trong suốt, nhìn xuyên hình nền trống đồng
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: 'rgba(203, 213, 225, 0.4)',
   },
-  headerLeftUser: {
+  headerLeftLogo: {
+    width: 44,
+    alignItems: 'flex-start',
+    justifyContent: 'center',
+  },
+  headerCenterUser: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 6,
   },
   userMiniAvatar: {
     width: 36,
@@ -908,7 +1334,8 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
   userNameCol: {
-    maxWidth: 120,
+    flexShrink: 1,
+    maxWidth: 220,
   },
   userGreeting: {
     fontSize: 10,
@@ -920,19 +1347,18 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#0F172A',
   },
-  headerCenterLogo: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   headerRightActions: {
-    flex: 1,
+    width: 44,
     alignItems: 'flex-end',
+    justifyContent: 'center',
   },
   bellBtn: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: 'rgba(255, 255, 255, 0.40)',
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
@@ -956,12 +1382,12 @@ const styles = StyleSheet.create({
     paddingBottom: 96,
   },
   businessBadgeCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'rgba(255, 255, 255, 0.45)',
     borderRadius: 16,
     padding: 14,
     marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderWidth: 1.5,
+    borderColor: '#CBD5E1',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -981,7 +1407,9 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 10,
-    backgroundColor: '#EFF6FF',
+    backgroundColor: 'rgba(239, 246, 255, 0.85)',
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 10,
@@ -1013,7 +1441,9 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   typePill: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: 'rgba(255, 255, 255, 0.85)',
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 6,
@@ -1025,9 +1455,11 @@ const styles = StyleSheet.create({
   },
   periodPicker: {
     flexDirection: 'row',
-    backgroundColor: '#F1F5F9',
+    backgroundColor: 'rgba(241, 245, 249, 0.70)',
     borderRadius: 8,
     padding: 2,
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
   },
   periodBtn: {
     paddingHorizontal: 8,
@@ -1035,7 +1467,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   periodBtnActive: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
@@ -1052,12 +1484,12 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   financeCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'rgba(255, 255, 255, 0.45)',
     borderRadius: 18,
     padding: 16,
     marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderWidth: 1.5,
+    borderColor: '#CBD5E1',
     shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.05,
@@ -1065,8 +1497,8 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   summaryCardBorder: {
-    borderColor: '#BFDBFE',
-    backgroundColor: '#FFFFFF',
+    borderColor: '#93C5FD',
+    backgroundColor: 'rgba(255, 255, 255, 0.45)',
   },
   financeCardHeader: {
     flexDirection: 'row',
@@ -1100,7 +1532,9 @@ const styles = StyleSheet.create({
   growthBadgeGreen: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#ECFDF5',
+    backgroundColor: 'rgba(236, 253, 245, 0.90)',
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
@@ -1112,7 +1546,9 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   ratioBadgeRed: {
-    backgroundColor: '#FEF2F2',
+    backgroundColor: 'rgba(254, 242, 242, 0.90)',
+    borderWidth: 1,
+    borderColor: '#FECACA',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
@@ -1123,7 +1559,9 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   summaryBadgeBlue: {
-    backgroundColor: '#EFF6FF',
+    backgroundColor: 'rgba(239, 246, 255, 0.90)',
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
@@ -1156,10 +1594,12 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   breakdownBox: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: 'rgba(255, 255, 255, 0.70)',
     borderRadius: 12,
     padding: 12,
     marginBottom: 14,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
   breakdownItem: {
     flexDirection: 'row',
@@ -1289,9 +1729,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'rgba(255, 255, 255, 0.75)',
     borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
+    borderTopColor: '#CBD5E1',
     paddingVertical: 8,
     paddingHorizontal: 8,
     position: 'relative',
@@ -1366,12 +1806,12 @@ const styles = StyleSheet.create({
   recentSearchItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'rgba(255, 255, 255, 0.50)',
     borderRadius: 10,
     padding: 12,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#CBD5E1',
     gap: 10,
   },
   recentSearchText: {
@@ -1387,12 +1827,12 @@ const styles = StyleSheet.create({
   },
   cameraFrame: {
     width: '100%',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'rgba(255, 255, 255, 0.45)',
     borderRadius: 20,
     padding: 24,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#BFDBFE',
+    borderWidth: 1.5,
+    borderColor: '#CBD5E1',
     shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.08,
@@ -1445,12 +1885,12 @@ const styles = StyleSheet.create({
   profileCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'rgba(255, 255, 255, 0.45)',
     borderRadius: 16,
     padding: 16,
     marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderWidth: 1.5,
+    borderColor: '#CBD5E1',
   },
   avatarCircle: {
     width: 52,
@@ -1506,12 +1946,12 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   sectionCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'rgba(255, 255, 255, 0.45)',
     borderRadius: 16,
     padding: 16,
     marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderWidth: 1.5,
+    borderColor: '#CBD5E1',
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -1701,21 +2141,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#FFFFFF',
   },
-  settingActionBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#EFF6FF',
-    paddingVertical: 10,
-    borderRadius: 10,
-    gap: 6,
-    marginTop: 10,
-  },
-  settingActionBtnText: {
-    color: '#1E56A0',
-    fontSize: 13,
-    fontWeight: '600',
-  },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(15, 23, 42, 0.45)',
@@ -1779,5 +2204,298 @@ const styles = StyleSheet.create({
   notifTime: {
     fontSize: 10,
     color: '#94A3B8',
+  },
+  // Tax Screen Styles
+  taxHeaderHero: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.45)',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 14,
+    borderWidth: 1.5,
+    borderColor: '#CBD5E1',
+    gap: 12,
+  },
+  taxHeroIconCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#EFF6FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  taxHeroTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#0F172A',
+  },
+  taxHeroSubtitle: {
+    fontSize: 11,
+    color: '#64748B',
+    marginTop: 2,
+    lineHeight: 16,
+  },
+  taxPersonalCard: {
+    backgroundColor: 'rgba(240, 253, 244, 0.65)',
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 14,
+    borderWidth: 1.5,
+    borderColor: '#BBF7D0',
+  },
+  taxPersonalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 10,
+  },
+  taxPersonalIconBox: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#DCFCE7',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  taxPersonalSub: {
+    fontSize: 11,
+    color: '#15803D',
+    fontWeight: '600',
+    textTransform: 'uppercase',
+  },
+  taxPersonalTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#14532D',
+    marginTop: 2,
+  },
+  taxPersonalBody: {
+    backgroundColor: 'rgba(255, 255, 255, 0.70)',
+    borderRadius: 12,
+    padding: 12,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  taxCheckRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+  },
+  taxCheckText: {
+    flex: 1,
+    fontSize: 12,
+    color: '#334155',
+    lineHeight: 17,
+  },
+  taxFilterScrollView: {
+    marginBottom: 14,
+  },
+  taxFilterRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  taxFilterChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.70)',
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+  },
+  taxFilterChipActive: {
+    backgroundColor: '#1E56A0',
+    borderColor: '#1E56A0',
+  },
+  taxFilterChipText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#64748B',
+  },
+  taxFilterChipTextActive: {
+    color: '#FFFFFF',
+  },
+  taxSectionWrapper: {
+    marginBottom: 14,
+  },
+  taxSectionMainTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#0F172A',
+    marginBottom: 4,
+  },
+  taxSectionSubTitle: {
+    fontSize: 11,
+    color: '#64748B',
+    marginBottom: 10,
+  },
+  taxLawCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.45)',
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 12,
+    borderWidth: 1.5,
+    borderColor: '#CBD5E1',
+  },
+  taxLawCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  taxLawBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  taxLawBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  taxLawTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#0F172A',
+    marginBottom: 4,
+  },
+  taxLawSub: {
+    fontSize: 12,
+    color: '#64748B',
+    lineHeight: 18,
+    marginBottom: 8,
+  },
+  taxRateBox: {
+    backgroundColor: 'rgba(255, 255, 255, 0.70)',
+    borderRadius: 10,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  taxRateRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 3,
+  },
+  taxRateLabel: {
+    fontSize: 12,
+    color: '#475569',
+    flex: 1,
+  },
+  taxRateVal: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#1E56A0',
+  },
+  taxRateSectorItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 8,
+    gap: 12,
+  },
+  taxRateSectorLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: 10,
+  },
+  taxRateSectorName: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#1E293B',
+  },
+  taxRateSectorSub: {
+    fontSize: 11,
+    color: '#64748B',
+    marginTop: 2,
+  },
+  taxRateSectorBadge: {
+    backgroundColor: '#EFF6FF',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  taxRateSectorBadgeText: {
+    color: '#1E56A0',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  taxDocItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  taxDocIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: '#EFF6FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 2,
+  },
+  taxDocName: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#1E293B',
+  },
+  taxDocDesc: {
+    fontSize: 11,
+    color: '#64748B',
+    marginTop: 2,
+    lineHeight: 16,
+  },
+  taxDeadlineCard: {
+    backgroundColor: '#FFFBEB',
+    borderRadius: 14,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+  },
+  taxDeadlineHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
+  },
+  taxDeadlineTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#B45309',
+  },
+  taxDeadlineRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 5,
+    borderBottomWidth: 0.5,
+    borderBottomColor: '#FEF3C7',
+  },
+  taxDeadlineLabel: {
+    fontSize: 12,
+    color: '#78350F',
+  },
+  taxDeadlineDate: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#B45309',
+  },
+  taxFaqItem: {
+    paddingVertical: 8,
+  },
+  taxFaqQ: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#0F172A',
+    marginBottom: 4,
+  },
+  taxFaqA: {
+    fontSize: 12,
+    color: '#475569',
+    lineHeight: 18,
   },
 });

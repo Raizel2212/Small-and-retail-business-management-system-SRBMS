@@ -19,6 +19,13 @@ public class UserController {
         this.userService = userService;
     }
 
+    @GetMapping("/business-profile")
+    public ResponseEntity<ApiResponse<UserDto>> getBusinessProfile(Authentication authentication) {
+        String cccd = authentication.getName();
+        UserDto profile = userService.getBusinessProfile(cccd);
+        return ResponseEntity.ok(ApiResponse.ok("Lấy thông tin cấu hình hộ kinh doanh thành công", profile));
+    }
+
     @PutMapping("/business-profile")
     public ResponseEntity<ApiResponse<UserDto>> updateBusinessProfile(
             Authentication authentication,

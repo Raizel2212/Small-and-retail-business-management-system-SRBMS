@@ -19,6 +19,7 @@ const MainNavigator: React.FC = () => {
   const [appScreen, setAppScreen] = useState<AppScreenState>('home');
   const [prefilledCccd, setPrefilledCccd] = useState<string>('');
   const [isRegisteredSuccess, setIsRegisteredSuccess] = useState<boolean>(false);
+  const [hasCompletedBusinessInfo, setHasCompletedBusinessInfo] = useState<boolean>(false);
   const prevUserRef = useRef(user);
 
   // Theo dõi trạng thái phiên đăng nhập:
@@ -31,11 +32,16 @@ const MainNavigator: React.FC = () => {
       }
       setIsRegisteredSuccess(false);
       setCurrentScreen('login');
+      // Nếu user đã có thông tin hộ kinh doanh thì đánh dấu hoàn thành
+      if (user.isFirstLogin === false && user.businessGroup) {
+        setHasCompletedBusinessInfo(true);
+      }
     } else if (prevUserRef.current && !user) {
       if (prevUserRef.current.cccd) {
         setPrefilledCccd(prevUserRef.current.cccd);
       }
       setIsRegisteredSuccess(false);
+      setHasCompletedBusinessInfo(false);
       setCurrentScreen('login');
       setAppScreen('home');
     }
@@ -55,11 +61,13 @@ const MainNavigator: React.FC = () => {
   // 2. Nếu đã đăng nhập thành công (có user và JWT token)
   if (user && token) {
     // Trường hợp 1: Nếu user lần đầu tiên đăng nhập vào -> tới trang điền chi tiết thông tin hộ kinh doanh
-    if (user.isFirstLogin === true || !user.businessGroup) {
+    if ((user.isFirstLogin === true || !user.businessGroup) && !hasCompletedBusinessInfo) {
       return (
         <BusinessInfoScreen
           onComplete={() => {
-            // Sau khi ấn "Tiếp theo", hệ thống đã lưu thông tin và chuyển isFirstLogin = false
+            // Sau khi ấn "Tiếp tục", chuyển ngay vào Trang chủ (HomeScreen)
+            setHasCompletedBusinessInfo(true);
+            setAppScreen('home');
           }}
         />
       );

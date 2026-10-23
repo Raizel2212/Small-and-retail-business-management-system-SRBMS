@@ -9,6 +9,7 @@ import {
   Platform,
   ScrollView,
   Alert,
+  Image,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,7 +17,6 @@ import { BrandLogo } from '../components/BrandLogo';
 import { CustomInput } from '../components/CustomInput';
 import { CustomButton } from '../components/CustomButton';
 import { GoogleIcon } from '../components/GoogleIcon';
-import { ServerConfigModal } from '../components/ServerConfigModal';
 import { ForgotPasswordModal } from '../components/ForgotPasswordModal';
 import { useAuth } from '../context/AuthContext';
 import { validateLoginIdentifier, validatePassword } from '../utils/validation';
@@ -34,7 +34,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   initialCccd = '',
   isRegisteredSuccess = false,
 }) => {
-  const { login, isLoading, baseUrl, updateBaseUrl } = useAuth();
+  const { login, isLoading } = useAuth();
 
   // Cho phép đăng nhập bằng Email, Số điện thoại hoặc số CCCD
   const [identifier, setIdentifier] = useState(initialCccd);
@@ -47,7 +47,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   }, [initialCccd]);
 
   const [errors, setErrors] = useState<{ identifier?: string; password?: string; general?: string }>({});
-  const [showServerConfig, setShowServerConfig] = useState(false);
   const [showForgotModal, setShowForgotModal] = useState(false);
 
   const handleLogin = async () => {
@@ -100,6 +99,15 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     <SafeAreaView style={styles.safeArea}>
       <StatusBar style="dark" />
 
+      {/* Watermark Background Illustration ở giữa màn hình */}
+      <View style={styles.backgroundIllustrationBox} pointerEvents="none">
+        <Image
+          source={require('../../assets/welcome_illustration.png')}
+          style={styles.backgroundIllustration}
+          resizeMode="contain"
+        />
+      </View>
+
       {/* Top Header Bar */}
       <View style={styles.headerBar}>
         <TouchableOpacity
@@ -113,14 +121,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 
         <BrandLogo size={36} showText={true} />
 
-        <TouchableOpacity
-          style={styles.serverIconBtn}
-          onPress={() => setShowServerConfig(true)}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="options-outline" size={20} color="#64748B" />
-        </TouchableOpacity>
+        {/* Khối đệm giữ cân bằng cho BrandLogo căn giữa */}
+        <View style={{ width: 38 }} />
       </View>
 
       <KeyboardAvoidingView
@@ -242,13 +244,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         </ScrollView>
       </KeyboardAvoidingView>
 
-      {/* Modal Cấu hình Server & Quên mật khẩu */}
-      <ServerConfigModal
-        visible={showServerConfig}
-        onClose={() => setShowServerConfig(false)}
-        currentUrl={baseUrl}
-        onSave={updateBaseUrl}
-      />
+      {/* Modal Quên mật khẩu */}
       <ForgotPasswordModal
         visible={showForgotModal}
         onClose={() => setShowForgotModal(false)}
@@ -260,34 +256,48 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#DBF8F3', // Nền xanh thương hiệu Hovit
+  },
+  backgroundIllustrationBox: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 0,
+    pointerEvents: 'none',
+  },
+  backgroundIllustration: {
+    width: 360,
+    height: 234,
+    opacity: 0.16, // Mờ nhẹ nhàng, tinh tế, vừa thấy hình vẽ vừa không chói, chữ nổi bật 100%
   },
   headerBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingVertical: 12,
+    paddingTop: Platform.OS === 'web' ? 42 : 12,
+    paddingBottom: 10,
+    backgroundColor: 'transparent',
+    zIndex: 1,
   },
   backButton: {
     width: 38,
     height: 38,
     borderRadius: 12,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#BFE7DE',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  serverIconBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    alignItems: 'center',
-    justifyContent: 'center',
+    shadowColor: '#1E5E4F',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 2,
+    elevation: 1,
   },
   keyboardView: {
     flex: 1,
@@ -303,13 +313,13 @@ const styles = StyleSheet.create({
   welcomeTitle: {
     fontSize: 24,
     fontWeight: '800',
-    color: '#0F172A',
+    color: '#123D32',
     marginBottom: 4,
     letterSpacing: -0.3,
   },
   welcomeSubtitle: {
     fontSize: 13,
-    color: '#64748B',
+    color: '#335E54',
     lineHeight: 18,
   },
   successBanner: {
@@ -372,7 +382,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   forgotBtnText: {
-    color: '#1E5E4F',
+    color: '#0D6E5D',
     fontSize: 13,
     fontWeight: '700',
   },
@@ -381,6 +391,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#1E5E4F',
     height: 50,
     borderRadius: 14,
+    shadowColor: '#1E5E4F',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 3,
   },
   dividerRow: {
     flexDirection: 'row',
@@ -390,12 +405,12 @@ const styles = StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: '#E2E8F0',
+    backgroundColor: '#BFE7DE',
   },
   dividerText: {
     paddingHorizontal: 12,
     fontSize: 12,
-    color: '#94A3B8',
+    color: '#335E54',
     fontWeight: '500',
   },
   socialContainer: {
@@ -407,12 +422,12 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: 14,
     borderWidth: 1.2,
-    borderColor: '#E2E8F0',
+    borderColor: '#BFE7DE',
     backgroundColor: '#FFFFFF',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#0F172A',
+    shadowColor: '#1E5E4F',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 2,
@@ -421,7 +436,7 @@ const styles = StyleSheet.create({
   googleBtnText: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#1E293B',
+    color: '#123D32',
     marginLeft: 10,
   },
   footerRow: {
@@ -432,11 +447,11 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   footerText: {
-    color: '#64748B',
+    color: '#335E54',
     fontSize: 14,
   },
   registerLink: {
-    color: '#1E5E4F',
+    color: '#0D6E5D',
     fontSize: 14,
     fontWeight: '800',
   },

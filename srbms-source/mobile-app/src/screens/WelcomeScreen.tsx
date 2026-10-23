@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -6,14 +6,13 @@ import {
   TouchableOpacity,
   SafeAreaView,
   Alert,
+  Platform,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { BrandLogo } from '../components/BrandLogo';
 import { CustomButton } from '../components/CustomButton';
 import { WelcomeIllustration } from '../components/WelcomeIllustration';
-import { ServerConfigModal } from '../components/ServerConfigModal';
-import { useAuth } from '../context/AuthContext';
 
 interface WelcomeScreenProps {
   onNavigateToLogin: () => void;
@@ -24,8 +23,6 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
   onNavigateToLogin,
   onNavigateToRegister,
 }) => {
-  const { baseUrl, updateBaseUrl } = useAuth();
-  const [showServerConfig, setShowServerConfig] = useState(false);
 
   const handleOpenTerms = () => {
     Alert.alert(
@@ -45,21 +42,9 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
     <SafeAreaView style={styles.safeArea}>
       <StatusBar style="dark" />
 
-      {/* Top Header Bar với Logo và Nút cấu hình Server */}
+      {/* Top Header Bar với Logo */}
       <View style={styles.topBar}>
         <BrandLogo size={42} showText={true} />
-
-        <TouchableOpacity
-          style={styles.serverButton}
-          onPress={() => setShowServerConfig(true)}
-          activeOpacity={0.7}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <Ionicons name="options-outline" size={16} color="#64748B" />
-          <Text style={styles.serverButtonText} numberOfLines={1}>
-            {baseUrl.replace(/^https?:\/\//, '')}
-          </Text>
-        </TouchableOpacity>
       </View>
 
       {/* Nội dung chính giữa */}
@@ -111,13 +96,6 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
         </View>
       </View>
 
-      {/* Modal cấu hình IP máy chủ */}
-      <ServerConfigModal
-        visible={showServerConfig}
-        onClose={() => setShowServerConfig(false)}
-        currentUrl={baseUrl}
-        onSave={updateBaseUrl}
-      />
     </SafeAreaView>
   );
 };
@@ -129,34 +107,11 @@ const styles = StyleSheet.create({
   },
   topBar: {
     paddingHorizontal: 24,
-    paddingTop: 14,
+    paddingTop: Platform.OS === 'web' ? 42 : 16,
     paddingBottom: 8,
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     zIndex: 10,
-  },
-  serverButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    paddingVertical: 5,
-    paddingHorizontal: 12,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#BFE7DE',
-    shadowColor: '#1E5E4F',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  serverButtonText: {
-    fontSize: 11,
-    color: '#265A4F',
-    marginLeft: 5,
-    fontWeight: '600',
-    maxWidth: 120,
   },
   content: {
     flex: 1,
