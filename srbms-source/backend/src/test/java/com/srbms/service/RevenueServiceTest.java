@@ -34,6 +34,9 @@ class RevenueServiceTest {
     @Mock
     private UserRepository userRepository;
 
+    @Mock
+    private ExpenseService expenseService;
+
     @InjectMocks
     private RevenueServiceImpl revenueService;
 
@@ -157,4 +160,26 @@ class RevenueServiceTest {
         assertFalse(result.getIsPaid());
         assertEquals("Chưa thu tiền", result.getPaymentStatusLabel());
     }
+
+    @Test
+    @DisplayName("Lấy danh mục sản phẩm và giá gợi ý từ chi phí nhập hàng")
+    void testGetProductSuggestions_Success() {
+        com.srbms.dto.response.ProductSuggestionDto suggestion = com.srbms.dto.response.ProductSuggestionDto.builder()
+                .productName("Cà phê Robusta Đắk Lắk")
+                .unit("kg")
+                .latestCostPrice(new BigDecimal("180000"))
+                .suggestedSellingPrice(new BigDecimal("250000"))
+                .build();
+
+        when(expenseService.getProductSuggestions("079201001234", null)).thenReturn(List.of(suggestion));
+
+        List<com.srbms.dto.response.ProductSuggestionDto> result = revenueService.getProductSuggestions("079201001234", null);
+
+        assertNotNull(result);
+        assertEquals(1, result.size());
+        assertEquals("Cà phê Robusta Đắk Lắk", result.get(0).getProductName());
+        assertEquals(new BigDecimal("250000"), result.get(0).getSuggestedSellingPrice());
+        verify(expenseService).getProductSuggestions("079201001234", null);
+    }
 }
+

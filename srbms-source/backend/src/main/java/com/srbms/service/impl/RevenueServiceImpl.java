@@ -22,17 +22,25 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
+import com.srbms.dto.response.ProductSuggestionDto;
+import com.srbms.service.ExpenseService;
+
 @Service
 public class RevenueServiceImpl implements RevenueService {
 
     private final RevenueRepository revenueRepository;
     private final UserRepository userRepository;
+    private final ExpenseService expenseService;
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
-    public RevenueServiceImpl(RevenueRepository revenueRepository, UserRepository userRepository) {
+    public RevenueServiceImpl(
+            RevenueRepository revenueRepository,
+            UserRepository userRepository,
+            ExpenseService expenseService) {
         this.revenueRepository = revenueRepository;
         this.userRepository = userRepository;
+        this.expenseService = expenseService;
     }
 
     @Override
@@ -320,6 +328,12 @@ public class RevenueServiceImpl implements RevenueService {
                         .build()
         );
         revenueRepository.saveAll(samples);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ProductSuggestionDto> getProductSuggestions(String cccd, String keyword) {
+        return expenseService.getProductSuggestions(cccd, keyword);
     }
 
     private String formatCurrency(BigDecimal amount) {

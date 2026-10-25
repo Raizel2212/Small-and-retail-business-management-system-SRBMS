@@ -55,3 +55,48 @@ CREATE INDEX IF NOT EXISTS idx_rev_tx_user_id ON revenue_transactions (user_id);
 CREATE INDEX IF NOT EXISTS idx_rev_tx_date ON revenue_transactions (transaction_date);
 CREATE INDEX IF NOT EXISTS idx_rev_tx_status ON revenue_transactions (payment_status);
 
+CREATE TABLE IF NOT EXISTS expense_transactions (
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    transaction_date DATE NOT NULL,
+    supplier_name VARCHAR(255) NOT NULL,
+    product_name VARCHAR(255) NOT NULL,
+    category VARCHAR(100) DEFAULT 'HANG_HOA',
+    unit VARCHAR(50) DEFAULT 'cái',
+    quantity INT NOT NULL DEFAULT 1,
+    unit_price NUMERIC(15, 2) NOT NULL,
+    amount NUMERIC(15, 2) NOT NULL,
+    suggested_selling_price NUMERIC(15, 2),
+    payment_method VARCHAR(50) NOT NULL DEFAULT 'TIEN_MAT',
+    payment_status VARCHAR(50) NOT NULL DEFAULT 'DA_THANH_TOAN',
+    note VARCHAR(500),
+    created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_expense_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_exp_tx_user_id ON expense_transactions (user_id);
+CREATE INDEX IF NOT EXISTS idx_exp_tx_date ON expense_transactions (transaction_date);
+CREATE INDEX IF NOT EXISTS idx_exp_tx_status ON expense_transactions (payment_status);
+CREATE INDEX IF NOT EXISTS idx_exp_tx_product ON expense_transactions (product_name);
+
+CREATE TABLE IF NOT EXISTS products (
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    product_code VARCHAR(50),
+    name VARCHAR(255) NOT NULL,
+    unit VARCHAR(50) DEFAULT 'cái',
+    category VARCHAR(100) DEFAULT 'HANG_HOA',
+    latest_cost_price NUMERIC(15, 2),
+    suggested_selling_price NUMERIC(15, 2),
+    total_imported_quantity INT DEFAULT 0,
+    last_import_date DATE,
+    last_supplier VARCHAR(255),
+    created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_product_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_prod_user_id ON products (user_id);
+CREATE INDEX IF NOT EXISTS idx_prod_name ON products (name);
+

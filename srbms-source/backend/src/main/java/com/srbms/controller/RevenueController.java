@@ -10,6 +10,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import com.srbms.dto.response.ProductSuggestionDto;
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/v1/revenue")
 public class RevenueController {
@@ -30,6 +33,15 @@ public class RevenueController {
         String cccd = authentication.getName();
         RevenueSummaryResponse summary = revenueService.getRevenueSummary(cccd, period, year, month, quarter);
         return ResponseEntity.ok(ApiResponse.ok("Lấy chi tiết doanh thu thành công", summary));
+    }
+
+    @GetMapping("/product-suggestions")
+    public ResponseEntity<ApiResponse<List<ProductSuggestionDto>>> getProductSuggestions(
+            Authentication authentication,
+            @RequestParam(required = false) String keyword) {
+        String cccd = authentication.getName();
+        List<ProductSuggestionDto> suggestions = revenueService.getProductSuggestions(cccd, keyword);
+        return ResponseEntity.ok(ApiResponse.ok("Lấy danh mục sản phẩm và giá gợi ý cho doanh thu thành công", suggestions));
     }
 
     @PostMapping
@@ -59,3 +71,4 @@ public class RevenueController {
         return ResponseEntity.ok(ApiResponse.ok("Xóa khoản doanh thu thành công", null));
     }
 }
+
