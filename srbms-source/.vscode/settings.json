@@ -1,0 +1,6 @@
+{
+    "java.compile.nullAnalysis.mode": "automatic",
+    "java.import.maven.enabled": true,
+    "java.project.importOnFirstTimeStartup": "automatic",
+    "java.configuration.updateBuildConfiguration": "automatic"
+}

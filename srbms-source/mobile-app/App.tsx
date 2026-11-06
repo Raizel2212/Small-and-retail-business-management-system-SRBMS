@@ -7,11 +7,12 @@ import { LoginScreen } from './src/screens/LoginScreen';
 import { RegisterScreen } from './src/screens/RegisterScreen';
 import { HomeScreen } from './src/screens/HomeScreen';
 import { RevenueDetailScreen } from './src/screens/RevenueDetailScreen';
+import { ExpenseDetailScreen } from './src/screens/ExpenseDetailScreen';
 import { BusinessInfoScreen } from './src/screens/BusinessInfoScreen';
 import { BrandLogo } from './src/components/BrandLogo';
 
 type AuthScreenState = 'welcome' | 'login' | 'register';
-type AppScreenState = 'home' | 'revenue-detail';
+type AppScreenState = 'home' | 'revenue-detail' | 'expense-detail';
 
 const MainNavigator: React.FC = () => {
   const { user, token, isInitializing } = useAuth();
@@ -82,10 +83,20 @@ const MainNavigator: React.FC = () => {
       );
     }
 
+    // Xem màn hình Chi tiết Chi phí
+    if (appScreen === 'expense-detail') {
+      return (
+        <ExpenseDetailScreen
+          onBack={() => setAppScreen('home')}
+        />
+      );
+    }
+
     // Trường hợp 2: Nếu từ lần thứ 2 đăng nhập -> Vào thẳng trang chủ luôn
     return (
       <HomeScreen
         onNavigateToRevenueDetail={() => setAppScreen('revenue-detail')}
+        onNavigateToExpenseDetail={() => setAppScreen('expense-detail')}
       />
     );
   }

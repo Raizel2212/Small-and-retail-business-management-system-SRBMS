@@ -182,7 +182,7 @@ public class ExpenseServiceImpl implements ExpenseService {
         ExpenseTransaction tx = ExpenseTransaction.builder()
                 .user(user)
                 .transactionDate(date)
-                .supplierName(request.getSupplierName().trim())
+                .supplierName(request.getSupplierName() != null && !request.getSupplierName().isBlank() ? request.getSupplierName().trim() : "Đại lý / Nhà phân phối")
                 .productName(request.getProductName().trim())
                 .category(category)
                 .unit(unit)
