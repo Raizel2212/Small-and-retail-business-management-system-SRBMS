@@ -22,9 +22,13 @@ type BottomTabType = 'home' | 'search' | 'camera' | 'tax' | 'settings';
 
 export interface HomeScreenProps {
   onNavigateToRevenueDetail?: () => void;
+  onNavigateToExpenseDetail?: () => void;
 }
 
-export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigateToRevenueDetail }) => {
+export const HomeScreen: React.FC<HomeScreenProps> = ({
+  onNavigateToRevenueDetail,
+  onNavigateToExpenseDetail,
+}) => {
   const { user, token, logout } = useAuth();
 
   const [activeTab, setActiveTab] = useState<BottomTabType>('home');
@@ -279,14 +283,26 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigateToRevenueDetai
         <View style={styles.cardActionsRow}>
           <TouchableOpacity
             style={[styles.cardActionBtn, { backgroundColor: '#FEF2F2' }]}
-            onPress={() => Alert.alert('Ghi nhận chi phí', 'Nhập khoản chi mua hàng hoặc vận hành')}
+            onPress={() => {
+              if (onNavigateToExpenseDetail) {
+                onNavigateToExpenseDetail();
+              } else {
+                Alert.alert('Ghi nhận chi phí', 'Nhập khoản chi mua hàng hoặc vận hành');
+              }
+            }}
           >
             <Ionicons name="receipt-outline" size={18} color="#DC2626" />
             <Text style={[styles.cardActionBtnText, { color: '#DC2626' }]}>+ Ghi khoản chi</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.cardDetailBtn}
-            onPress={() => Alert.alert('Sổ chi phí', 'Xem toàn bộ chứng từ chi phí')}
+            onPress={() => {
+              if (onNavigateToExpenseDetail) {
+                onNavigateToExpenseDetail();
+              } else {
+                Alert.alert('Sổ chi phí', 'Xem toàn bộ chứng từ chi phí');
+              }
+            }}
           >
             <Text style={styles.cardDetailBtnText}>Chi tiết chi phí</Text>
             <Ionicons name="chevron-forward" size={14} color="#64748B" />

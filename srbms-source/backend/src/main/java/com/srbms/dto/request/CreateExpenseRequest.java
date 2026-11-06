@@ -18,8 +18,9 @@ import java.time.LocalDate;
 @Builder
 public class CreateExpenseRequest {
 
-    @NotBlank(message = "Tên nhà cung cấp / người bán không được để trống")
-    private String supplierName;
+    // Tên nhà cung cấp / người bán (tùy chọn, mặc định "Đại lý / Nhà phân phối")
+    @Builder.Default
+    private String supplierName = "Đại lý / Nhà phân phối";
 
     @NotBlank(message = "Tên hàng hóa không được để trống")
     private String productName;

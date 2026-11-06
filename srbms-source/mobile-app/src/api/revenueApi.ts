@@ -20,6 +20,24 @@ const PRODUCT_STORAGE_KEY = '@srbms_product_catalog';
 
 export const productCatalogService = {
   async getCatalog(): Promise<ProductCatalogItem[]> {
+    // 1. Lấy danh mục sản phẩm và giá bán gợi ý được đồng bộ từ chi phí nhập hàng
+    try {
+      const response = await apiClient.get<ApiResponse<any[]>>('/api/v1/revenue/product-suggestions');
+      if (response.data && response.data.data && response.data.data.length > 0) {
+        const backendItems: ProductCatalogItem[] = response.data.data.map((item: any) => ({
+          id: item.productCode || `SP_${item.id}`,
+          name: item.productName,
+          price: item.suggestedSellingPrice || item.latestCostPrice || 0,
+          unit: item.unit || 'cái',
+        }));
+        await AsyncStorage.setItem(PRODUCT_STORAGE_KEY, JSON.stringify(backendItems));
+        return backendItems;
+      }
+    } catch (e: any) {
+      console.warn('Backend product suggestions fallback:', e.message);
+    }
+
+    // 2. Fallback sang bộ nhớ local AsyncStorage nếu thiết bị offline
     try {
       const stored = await AsyncStorage.getItem(PRODUCT_STORAGE_KEY);
       if (stored) {
