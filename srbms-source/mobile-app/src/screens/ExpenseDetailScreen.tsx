@@ -39,6 +39,20 @@ export const ExpenseDetailScreen: React.FC<ExpenseDetailScreenProps> = ({ onBack
   const [selectedItem, setSelectedItem] = useState<ExpenseItem | null>(null);
   const [showActionModal, setShowActionModal] = useState<boolean>(false);
 
+  // Edit Modal State
+  const [showEditModal, setShowEditModal] = useState<boolean>(false);
+  const [editingItem, setEditingItem] = useState<ExpenseItem | null>(null);
+  const [editProductName, setEditProductName] = useState<string>('');
+  const [editQuantity, setEditQuantity] = useState<string>('1');
+  const [editUnitPrice, setEditUnitPrice] = useState<string>('');
+  const [editUnit, setEditUnit] = useState<string>('cái');
+  const [editSupplierName, setEditSupplierName] = useState<string>('');
+  const [editSuggestedPrice, setEditSuggestedPrice] = useState<string>('');
+  const [editPaymentMethod, setEditPaymentMethod] = useState<'TIEN_MAT' | 'CHUYEN_KHOAN'>('TIEN_MAT');
+  const [editPaymentStatus, setEditPaymentStatus] = useState<'DA_THANH_TOAN' | 'CHUA_THANH_TOAN'>('DA_THANH_TOAN');
+  const [editNote, setEditNote] = useState<string>('');
+  const [editSubmitting, setEditSubmitting] = useState<boolean>(false);
+
   // Gợi ý sản phẩm từ lịch sử nhập hàng
   const [suggestions, setSuggestions] = useState<ProductSuggestion[]>([]);
   const [suggestionSearch, setSuggestionSearch] = useState<string>('');
@@ -278,7 +292,65 @@ export const ExpenseDetailScreen: React.FC<ExpenseDetailScreenProps> = ({ onBack
     );
   };
 
-  // Nhãn hiển thị kỳ
+  // Mở modal chỉnh sửa chi phí
+  const handleOpenEditModal = (item: ExpenseItem) => {
+    setShowActionModal(false);
+    setEditingItem(item);
+    setEditProductName(item.productName);
+    setEditQuantity(item.quantity?.toString() || '1');
+    setEditUnitPrice(item.unitPrice ? item.unitPrice.toLocaleString('vi-VN') : '');
+    setEditUnit(item.unit || 'cái');
+    setEditSupplierName(item.supplierName || '');
+    setEditSuggestedPrice(item.suggestedSellingPrice ? item.suggestedSellingPrice.toLocaleString('vi-VN') : '');
+    setEditPaymentMethod(item.paymentMethod === 'CHUYEN_KHOAN' ? 'CHUYEN_KHOAN' : 'TIEN_MAT');
+    setEditPaymentStatus(item.isPaid ? 'DA_THANH_TOAN' : 'CHUA_THANH_TOAN');
+    setEditNote(item.note || '');
+    setShowEditModal(true);
+  };
+
+  // Submit cập nhật chi phí
+  const handleSubmitEdit = async () => {
+    if (!editingItem) return;
+    if (!editProductName.trim()) {
+      Alert.alert('Chưa đủ thông tin', 'Vui lòng nhập tên mặt hàng.');
+      return;
+    }
+
+    const cleanPrice = parseFloat(editUnitPrice.replace(/[^0-9]/g, '')) || 0;
+    const cleanQty = parseInt(editQuantity, 10) || 1;
+    const cleanSuggested = editSuggestedPrice
+      ? (parseFloat(editSuggestedPrice.replace(/[^0-9]/g, '')) || undefined)
+      : undefined;
+
+    setEditSubmitting(true);
+    try {
+      await expenseApi.updateExpense(editingItem.id, {
+        productName: editProductName.trim(),
+        supplierName: editSupplierName.trim() || 'Đại lý / Nhà phân phối',
+        quantity: cleanQty,
+        unitPrice: cleanPrice,
+        amount: cleanQty * cleanPrice,
+        unit: editUnit.trim() || 'cái',
+        suggestedSellingPrice: cleanSuggested,
+        paymentMethod: editPaymentMethod,
+        paymentStatus: editPaymentStatus,
+        note: editNote.trim() || undefined,
+      });
+
+      const freshData = await expenseApi.getExpenseSummary(period);
+      setSummaryData(freshData);
+      setShowEditModal(false);
+      Alert.alert(
+        'Thành công',
+        `Đã cập nhật mặt hàng "${editProductName}" và tự động đồng bộ sang danh mục sản phẩm gợi ý của Doanh thu!`
+      );
+      loadSuggestions();
+    } catch (error: any) {
+      Alert.alert('Lỗi cập nhật', error?.message || 'Không thể cập nhật khoản chi.');
+    } finally {
+      setEditSubmitting(false);
+    }
+  };
   const getPeriodDisplayLabel = () => {
     switch (period) {
       case 'month':
@@ -1269,6 +1341,17 @@ export const ExpenseDetailScreen: React.FC<ExpenseDetailScreenProps> = ({ onBack
                     </Text>
                   </TouchableOpacity>
 
+                  {/* Nút chỉnh sửa khoản chi phí */}
+                  <TouchableOpacity
+                    style={[styles.actionItemBtn, { backgroundColor: '#EFF6FF', marginTop: 8 }]}
+                    onPress={() => handleOpenEditModal(selectedItem)}
+                  >
+                    <Ionicons name="create-outline" size={18} color="#0284C7" style={{ marginRight: 8 }} />
+                    <Text style={[styles.actionItemBtnText, { color: '#0284C7' }]}>
+                      Chỉnh sửa khoản chi phí này
+                    </Text>
+                  </TouchableOpacity>
+
                   {/* Nút xóa khoản chi */}
                   <TouchableOpacity
                     style={[styles.actionItemBtn, { backgroundColor: '#FEE2E2', marginTop: 8 }]}
@@ -1284,6 +1367,275 @@ export const ExpenseDetailScreen: React.FC<ExpenseDetailScreenProps> = ({ onBack
             )}
           </View>
         </TouchableOpacity>
+      </Modal>
+
+      {/* ========================================================= */}
+      {/* MODAL 5: CHỈNH SỬA KHOẢN CHI PHÍ & ĐỒNG BỘ DOANH THU */}
+      {/* ========================================================= */}
+      <Modal
+        visible={showEditModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowEditModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.createModalCard}>
+            {/* Header Modal */}
+            <View style={styles.modalHeaderRow}>
+              <View style={styles.createModalHeaderLeft}>
+                <View style={[styles.createIconBadge, { backgroundColor: '#E0F2FE' }]}>
+                  <Ionicons name="create" size={18} color="#0284C7" />
+                </View>
+                <View style={styles.createModalTitleWrap}>
+                  <Text style={styles.modalTitle} numberOfLines={1}>
+                    Chỉnh sửa khoản chi
+                  </Text>
+                  <Text style={styles.modalSubTitle} numberOfLines={1}>
+                    Tự động đồng bộ sản phẩm sang Doanh thu
+                  </Text>
+                </View>
+              </View>
+
+              <TouchableOpacity
+                onPress={() => setShowEditModal(false)}
+                style={styles.createModalCloseBtn}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Ionicons name="close" size={22} color="#64748B" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 520 }}>
+              {/* Tên mặt hàng */}
+              <Text style={styles.formLabel}>Tên mặt hàng *</Text>
+              <TextInput
+                style={styles.formInputSimple}
+                placeholder="Tên mặt hàng"
+                placeholderTextColor="#94A3B8"
+                value={editProductName}
+                onChangeText={setEditProductName}
+              />
+
+              {/* Nhà cung cấp */}
+              <View style={{ marginTop: 10 }}>
+                <Text style={styles.formLabel}>Nhà cung cấp / Đại lý</Text>
+                <TextInput
+                  style={styles.formInputSimple}
+                  placeholder="Tên đại lý hoặc đơn vị giao hàng"
+                  placeholderTextColor="#94A3B8"
+                  value={editSupplierName}
+                  onChangeText={setEditSupplierName}
+                />
+              </View>
+
+              {/* Số lượng & Đơn vị tính */}
+              <View style={[styles.formRowTwoCols, { marginTop: 10 }]}>
+                <View style={styles.colHalf}>
+                  <Text style={styles.formLabel}>Số lượng</Text>
+                  <TextInput
+                    style={styles.formInputSimple}
+                    keyboardType="numeric"
+                    value={editQuantity}
+                    onChangeText={(t) => setEditQuantity(t.replace(/[^0-9]/g, ''))}
+                  />
+                </View>
+                <View style={styles.colHalf}>
+                  <Text style={styles.formLabel}>Đơn vị tính</Text>
+                  <TextInput
+                    style={styles.formInputSimple}
+                    placeholder="cái, kg, hộp..."
+                    placeholderTextColor="#94A3B8"
+                    value={editUnit}
+                    onChangeText={setEditUnit}
+                  />
+                </View>
+              </View>
+
+              {/* Đơn giá nhập & Giá bán gợi ý */}
+              <View style={[styles.formRowTwoCols, { marginTop: 10 }]}>
+                <View style={styles.colHalf}>
+                  <Text style={styles.formLabel}>Đơn giá nhập (₫) *</Text>
+                  <TextInput
+                    style={styles.formInputSimple}
+                    keyboardType="numeric"
+                    placeholder="VD: 180.000"
+                    placeholderTextColor="#94A3B8"
+                    value={editUnitPrice}
+                    onChangeText={(t) => {
+                      const c = t.replace(/[^0-9]/g, '');
+                      setEditUnitPrice(c ? Number(c).toLocaleString('vi-VN') : '');
+                    }}
+                  />
+                </View>
+                <View style={styles.colHalf}>
+                  <Text style={styles.formLabel}>Giá bán gợi ý cho Doanh thu</Text>
+                  <TextInput
+                    style={[styles.formInputSimple, { borderColor: '#10B981', backgroundColor: '#F0FDF4' }]}
+                    keyboardType="numeric"
+                    placeholder="VD: 250.000"
+                    placeholderTextColor="#94A3B8"
+                    value={editSuggestedPrice}
+                    onChangeText={(t) => {
+                      const c = t.replace(/[^0-9]/g, '');
+                      setEditSuggestedPrice(c ? Number(c).toLocaleString('vi-VN') : '');
+                    }}
+                  />
+                </View>
+              </View>
+
+              {/* Thành tiền tính tự động */}
+              <View style={[styles.computedAmountBox, { marginTop: 12 }]}>
+                <View style={styles.computedAmountLeft}>
+                  <Text style={styles.computedAmountLabel}>THÀNH TIỀN (TỰ ĐỘNG)</Text>
+                  <Text style={styles.computedAmountFormula}>
+                    {parseInt(editQuantity, 10) || 0} {editUnit || 'cái'} × {(parseFloat(editUnitPrice.replace(/[^0-9]/g, '')) || 0).toLocaleString('vi-VN')} ₫
+                  </Text>
+                </View>
+                <View style={styles.computedAmountRight}>
+                  <Text style={styles.computedAmountValue}>
+                    {((parseInt(editQuantity, 10) || 0) * (parseFloat(editUnitPrice.replace(/[^0-9]/g, '')) || 0)).toLocaleString('vi-VN')}
+                  </Text>
+                  <Text style={styles.computedAmountUnit}>₫</Text>
+                </View>
+              </View>
+
+              {/* Hình thức thanh toán */}
+              <View style={{ marginTop: 12 }}>
+                <Text style={styles.formLabel}>Hình thức chi:</Text>
+                <View style={styles.methodToggleRow}>
+                  <TouchableOpacity
+                    style={[
+                      styles.methodToggleBtn,
+                      editPaymentMethod === 'TIEN_MAT' && styles.methodToggleBtnActive,
+                    ]}
+                    onPress={() => setEditPaymentMethod('TIEN_MAT')}
+                  >
+                    <Ionicons
+                      name="cash-outline"
+                      size={16}
+                      color={editPaymentMethod === 'TIEN_MAT' ? '#DC2626' : '#64748B'}
+                    />
+                    <Text
+                      style={[
+                        styles.methodToggleText,
+                        editPaymentMethod === 'TIEN_MAT' && styles.methodToggleTextActive,
+                      ]}
+                    >
+                      Tiền mặt
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.methodToggleBtn,
+                      editPaymentMethod === 'CHUYEN_KHOAN' && styles.methodToggleBtnActive,
+                    ]}
+                    onPress={() => setEditPaymentMethod('CHUYEN_KHOAN')}
+                  >
+                    <Ionicons
+                      name="card-outline"
+                      size={16}
+                      color={editPaymentMethod === 'CHUYEN_KHOAN' ? '#DC2626' : '#64748B'}
+                    />
+                    <Text
+                      style={[
+                        styles.methodToggleText,
+                        editPaymentMethod === 'CHUYEN_KHOAN' && styles.methodToggleTextActive,
+                      ]}
+                    >
+                      Chuyển khoản
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {/* Trạng thái chi */}
+              <View style={{ marginTop: 12 }}>
+                <Text style={styles.formLabel}>Trạng thái thanh toán:</Text>
+                <View style={styles.methodToggleRow}>
+                  <TouchableOpacity
+                    style={[
+                      styles.methodToggleBtn,
+                      editPaymentStatus === 'DA_THANH_TOAN' && styles.methodToggleBtnPaidActive,
+                    ]}
+                    onPress={() => setEditPaymentStatus('DA_THANH_TOAN')}
+                  >
+                    <Ionicons
+                      name="checkmark-circle-outline"
+                      size={16}
+                      color={editPaymentStatus === 'DA_THANH_TOAN' ? '#059669' : '#64748B'}
+                    />
+                    <Text
+                      style={[
+                        styles.methodToggleText,
+                        editPaymentStatus === 'DA_THANH_TOAN' && styles.methodToggleTextPaidActive,
+                      ]}
+                    >
+                      Đã chi tiền
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.methodToggleBtn,
+                      editPaymentStatus === 'CHUA_THANH_TOAN' && styles.methodToggleBtnUnpaidActive,
+                    ]}
+                    onPress={() => setEditPaymentStatus('CHUA_THANH_TOAN')}
+                  >
+                    <Ionicons
+                      name="time-outline"
+                      size={16}
+                      color={editPaymentStatus === 'CHUA_THANH_TOAN' ? '#B91C1C' : '#64748B'}
+                    />
+                    <Text
+                      style={[
+                        styles.methodToggleText,
+                        editPaymentStatus === 'CHUA_THANH_TOAN' && styles.methodToggleTextUnpaidActive,
+                      ]}
+                    >
+                      Chưa thanh toán
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {/* Ghi chú */}
+              <View style={{ marginTop: 12 }}>
+                <Text style={styles.formLabel}>Ghi chú</Text>
+                <TextInput
+                  style={styles.formInputSimple}
+                  placeholder="Ghi chú thêm..."
+                  placeholderTextColor="#94A3B8"
+                  value={editNote}
+                  onChangeText={setEditNote}
+                />
+              </View>
+            </ScrollView>
+
+            <View style={styles.modalActionButtonsRow}>
+              <TouchableOpacity
+                style={styles.cancelBtn}
+                onPress={() => setShowEditModal(false)}
+                disabled={editSubmitting}
+              >
+                <Text style={styles.cancelBtnText}>Hủy</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.submitCreateBtn, editSubmitting && styles.submitBtnDisabled]}
+                onPress={handleSubmitEdit}
+                disabled={editSubmitting}
+              >
+                {editSubmitting ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <>
+                    <Ionicons name="sync" size={18} color="#FFFFFF" style={{ marginRight: 6 }} />
+                    <Text style={styles.submitCreateBtnText}>Lưu & Đồng bộ Doanh thu</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
       </Modal>
     </SafeAreaView>
   );

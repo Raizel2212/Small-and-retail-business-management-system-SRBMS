@@ -1,7 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { apiClient } from './client';
 import { ApiResponse } from '../types/auth';
-import { ExpenseSummary, ExpenseItem, CreateExpensePayload, ProductSuggestion } from '../types/expense';
+import { ExpenseSummary, ExpenseItem, CreateExpensePayload, UpdateExpensePayload, ProductSuggestion } from '../types/expense';
+import { productCatalogService } from '../services/productCatalogService';
 
 const EXPENSE_STORAGE_KEY = '@srbms_expense_summary_v2';
 const PRODUCT_SUGGESTIONS_KEY = '@srbms_expense_suggestions_v2';
@@ -269,7 +270,71 @@ export const expenseApi = {
     const updatedItems = [newItem, ...currentItems];
     await saveLocalExpenseItems(updatedItems);
 
+    // Tự động đồng bộ sản phẩm gợi ý sang phần Doanh thu
+    await productCatalogService.notifyExpenseUpdated();
+
     return newItem;
+  },
+
+  /**
+   * Cập nhật một khoản chi phí nhập hàng
+   * Sau khi cập nhật, tự động đồng bộ lại danh mục sản phẩm và giá gợi ý sang Doanh thu
+   */
+  async updateExpense(id: number, payload: UpdateExpensePayload): Promise<ExpenseItem> {
+    let updatedFromBackend: ExpenseItem | null = null;
+    try {
+      const response = await apiClient.put<ApiResponse<ExpenseItem>>(`/api/v1/expenses/${id}`, payload);
+      if (response.data && response.data.data) {
+        updatedFromBackend = response.data.data;
+      }
+    } catch (error: any) {
+      console.warn('Backend updateExpense offline, lưu vào local storage:', error?.message);
+    }
+
+    const currentItems = await getLocalExpenseItems();
+    const updatedItems = currentItems.map((item) => {
+      if (item.id === id) {
+        if (updatedFromBackend) return updatedFromBackend;
+
+        const qty = payload.quantity !== undefined && payload.quantity > 0 ? payload.quantity : item.quantity;
+        const unitPrice = payload.unitPrice !== undefined ? payload.unitPrice : item.unitPrice;
+        const amt = payload.amount !== undefined && payload.amount > 0 ? payload.amount : (qty * unitPrice);
+        const isPaid = payload.paymentStatus
+          ? (payload.paymentStatus === 'DA_THANH_TOAN' || (payload.paymentStatus as string) === 'DA_CHI')
+          : item.isPaid;
+
+        return {
+          ...item,
+          productName: payload.productName ? payload.productName.trim() : item.productName,
+          supplierName: payload.supplierName ? payload.supplierName.trim() : item.supplierName,
+          unit: payload.unit ? payload.unit.trim() : item.unit,
+          quantity: qty,
+          unitPrice: unitPrice,
+          unitPriceFormatted: formatVND(unitPrice),
+          amount: amt,
+          amountFormatted: formatVND(amt),
+          suggestedSellingPrice: payload.suggestedSellingPrice !== undefined ? payload.suggestedSellingPrice : item.suggestedSellingPrice,
+          suggestedSellingPriceFormatted: payload.suggestedSellingPrice ? formatVND(payload.suggestedSellingPrice) : item.suggestedSellingPriceFormatted,
+          transactionDate: payload.transactionDate || item.transactionDate,
+          paymentMethod: payload.paymentMethod || item.paymentMethod,
+          paymentMethodLabel: (payload.paymentMethod || item.paymentMethod) === 'CHUYEN_KHOAN' ? 'Chuyển khoản' : 'Tiền mặt',
+          paymentStatus: payload.paymentStatus || item.paymentStatus,
+          paymentStatusLabel: isPaid ? 'Đã chi tiền' : 'Chưa thanh toán',
+          isPaid: isPaid,
+          note: payload.note !== undefined ? payload.note : item.note,
+        };
+      }
+      return item;
+    });
+
+    await saveLocalExpenseItems(updatedItems);
+
+    // Tự động đồng bộ sản phẩm gợi ý sang phần Doanh thu
+    await productCatalogService.notifyExpenseUpdated();
+
+    const target = updatedItems.find((it) => it.id === id);
+    if (!target) throw new Error('Không tìm thấy khoản chi phí để cập nhật');
+    return target;
   },
 
   /**
@@ -286,6 +351,7 @@ export const expenseApi = {
         const currentItems = await getLocalExpenseItems();
         const updated = currentItems.map((it) => (it.id === id ? itemData : it));
         await saveLocalExpenseItems(updated);
+        await productCatalogService.notifyExpenseUpdated();
         return itemData;
       }
     } catch (error: any) {
@@ -300,6 +366,7 @@ export const expenseApi = {
       target.paymentStatus = nextPaid ? 'DA_THANH_TOAN' : 'CHUA_THANH_TOAN';
       target.paymentStatusLabel = nextPaid ? 'Đã chi tiền' : 'Chưa thanh toán';
       await saveLocalExpenseItems(currentItems);
+      await productCatalogService.notifyExpenseUpdated();
       return target;
     }
     throw new Error('Không tìm thấy khoản chi phí');
@@ -318,6 +385,9 @@ export const expenseApi = {
     const currentItems = await getLocalExpenseItems();
     const filtered = currentItems.filter((it) => it.id !== id);
     await saveLocalExpenseItems(filtered);
+
+    // Tự động đồng bộ lại sản phẩm sang phần Doanh thu sau khi xóa chi phí
+    await productCatalogService.notifyExpenseUpdated();
   },
 
   /**
