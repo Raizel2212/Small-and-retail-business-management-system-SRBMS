@@ -297,19 +297,39 @@ public class ExpenseServiceImpl implements ExpenseService {
             throw new AppException(HttpStatus.FORBIDDEN, "Bạn không có quyền xóa khoản mục này");
         }
 
+        String deletedProductName = tx.getProductName();
         expenseRepository.delete(tx);
+
+        // Cập nhật lại sản phẩm gợi ý tương ứng sau khi xóa khoản chi
+        updateProductAfterExpenseDeletion(user, deletedProductName);
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public List<ProductSuggestionDto> getProductSuggestions(String cccd, String keyword) {
         User user = getUserByCccd(cccd);
+
+        // Khởi tạo dữ liệu mẫu lần đầu nếu người dùng chưa có giao dịch chi phí nào
+        if (expenseRepository.countByUser(user) == 0) {
+            seedSampleExpenses(user);
+        }
 
         List<Product> products;
         if (keyword != null && !keyword.isBlank()) {
             products = productRepository.findByUserAndNameContainingIgnoreCaseOrderByNameAsc(user, keyword.trim());
         } else {
             products = productRepository.findByUserOrderByNameAsc(user);
+        }
+
+        // Tự động đồng bộ nếu danh mục sản phẩm chưa có nhưng chi phí đã có
+        if (products.isEmpty() && expenseRepository.countByUser(user) > 0) {
+            List<ExpenseTransaction> all = expenseRepository.findByUserOrderByTransactionDateDescIdDesc(user);
+            for (ExpenseTransaction exp : all) {
+                upsertProductCatalog(user, exp);
+            }
+            products = (keyword != null && !keyword.isBlank())
+                    ? productRepository.findByUserAndNameContainingIgnoreCaseOrderByNameAsc(user, keyword.trim())
+                    : productRepository.findByUserOrderByNameAsc(user);
         }
 
         List<ProductSuggestionDto> result = new ArrayList<>();
@@ -331,6 +351,35 @@ public class ExpenseServiceImpl implements ExpenseService {
                     .build());
         }
         return result;
+    }
+
+    private void updateProductAfterExpenseDeletion(User user, String productName) {
+        if (productName == null || productName.isBlank()) return;
+        Optional<Product> existingOpt = productRepository.findByUserAndNameIgnoreCase(user, productName.trim());
+        if (existingOpt.isEmpty()) return;
+
+        Product product = existingOpt.get();
+        List<ExpenseTransaction> remaining = expenseRepository.findByUserOrderByTransactionDateDescIdDesc(user);
+        if (remaining == null) return;
+
+        List<ExpenseTransaction> productExpenses = remaining.stream()
+                .filter(t -> t.getProductName() != null && t.getProductName().trim().equalsIgnoreCase(productName.trim()))
+                .toList();
+
+        if (productExpenses.isEmpty()) {
+            productRepository.delete(product);
+        } else {
+            ExpenseTransaction latest = productExpenses.get(0);
+            product.setLatestCostPrice(latest.getUnitPrice());
+            if (latest.getSuggestedSellingPrice() != null) {
+                product.setSuggestedSellingPrice(latest.getSuggestedSellingPrice());
+            }
+            int totalQty = productExpenses.stream().mapToInt(t -> t.getQuantity() != null ? t.getQuantity() : 0).sum();
+            product.setTotalImportedQuantity(totalQty);
+            product.setLastImportDate(latest.getTransactionDate());
+            product.setLastSupplier(latest.getSupplierName());
+            productRepository.save(product);
+        }
     }
 
     private void upsertProductCatalog(User user, ExpenseTransaction expense) {
