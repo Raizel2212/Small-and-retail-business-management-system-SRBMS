@@ -52,4 +52,14 @@ export interface ProductCatalogItem {
   name: string;
   price: number;
   unit?: string;
+  costPrice?: number;
+  costPriceFormatted?: string;
+  suggestedSellingPrice?: number;
+  suggestedSellingPriceFormatted?: string;
+  totalImportedQuantity?: number;
+  lastImportDate?: string;
+  lastImportDateFormatted?: string;
+  lastSupplier?: string;
+  category?: string;
+  isFromExpense?: boolean;
 }

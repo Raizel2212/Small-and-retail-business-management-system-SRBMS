@@ -3,78 +3,7 @@ import { apiClient } from './client';
 import { ApiResponse } from '../types/auth';
 import { RevenueSummary, RevenueItem, CreateRevenuePayload, ProductCatalogItem } from '../types/revenue';
 
-export const DEFAULT_PRODUCTS: ProductCatalogItem[] = [
-  { id: 'SP01', name: 'Cà phê đen', price: 25000, unit: 'ly' },
-  { id: 'SP02', name: 'Cà phê sữa đá', price: 28000, unit: 'ly' },
-  { id: 'SP03', name: 'Nước ngọt lon (Coca/Pepsi)', price: 15000, unit: 'lon' },
-  { id: 'SP04', name: 'Nước suối tinh khiết', price: 10000, unit: 'chai' },
-  { id: 'SP05', name: 'Bánh mì thịt đặc biệt', price: 30000, unit: 'ổ' },
-  { id: 'SP06', name: 'Khăn lạnh tiệt trùng', price: 5000, unit: 'cái' },
-  { id: 'SP07', name: 'Áo thun cotton cao cấp', price: 120000, unit: 'cái' },
-  { id: 'SP08', name: 'Gạo ST25 Ông Cua (5kg)', price: 180000, unit: 'túi' },
-  { id: 'SP09', name: 'Bột ngũ cốc dinh dưỡng', price: 200000, unit: 'hộp' },
-  { id: 'SP10', name: 'Trà Thái Nguyên Thượng Hạng', price: 300000, unit: 'gói' },
-];
-
-const PRODUCT_STORAGE_KEY = '@srbms_product_catalog';
-
-export const productCatalogService = {
-  async getCatalog(): Promise<ProductCatalogItem[]> {
-    // 1. Lấy danh mục sản phẩm và giá bán gợi ý được đồng bộ từ chi phí nhập hàng
-    try {
-      const response = await apiClient.get<ApiResponse<any[]>>('/api/v1/revenue/product-suggestions');
-      if (response.data && response.data.data && response.data.data.length > 0) {
-        const backendItems: ProductCatalogItem[] = response.data.data.map((item: any) => ({
-          id: item.productCode || `SP_${item.id}`,
-          name: item.productName,
-          price: item.suggestedSellingPrice || item.latestCostPrice || 0,
-          unit: item.unit || 'cái',
-        }));
-        await AsyncStorage.setItem(PRODUCT_STORAGE_KEY, JSON.stringify(backendItems));
-        return backendItems;
-      }
-    } catch (e: any) {
-      console.warn('Backend product suggestions fallback:', e.message);
-    }
-
-    // 2. Fallback sang bộ nhớ local AsyncStorage nếu thiết bị offline
-    try {
-      const stored = await AsyncStorage.getItem(PRODUCT_STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
-        }
-      }
-    } catch (e) {
-      console.warn('Error loading product catalog:', e);
-    }
-    return DEFAULT_PRODUCTS;
-  },
-
-  async addOrUpdateProduct(product: ProductCatalogItem): Promise<ProductCatalogItem[]> {
-    try {
-      const list = await productCatalogService.getCatalog();
-      const existingIdx = list.findIndex(
-        (p) =>
-          p.name.trim().toLowerCase() === product.name.trim().toLowerCase() ||
-          p.id.toLowerCase() === product.id.toLowerCase()
-      );
-      let updated: ProductCatalogItem[];
-      if (existingIdx >= 0) {
-        updated = [...list];
-        updated[existingIdx] = { ...updated[existingIdx], ...product };
-      } else {
-        updated = [product, ...list];
-      }
-      await AsyncStorage.setItem(PRODUCT_STORAGE_KEY, JSON.stringify(updated));
-      return updated;
-    } catch (e) {
-      console.warn('Error saving product:', e);
-      return DEFAULT_PRODUCTS;
-    }
-  },
-};
+export { DEFAULT_PRODUCTS, PRODUCT_STORAGE_KEY, productCatalogService } from '../services/productCatalogService';
 
 const formatVND = (num: number): string => {
   return Math.round(num)

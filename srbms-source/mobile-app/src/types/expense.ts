@@ -54,6 +54,21 @@ export interface CreateExpensePayload {
   note?: string;
 }
 
+export interface UpdateExpensePayload {
+  supplierName?: string;
+  productName?: string;
+  quantity?: number;
+  unitPrice?: number;
+  amount?: number;
+  suggestedSellingPrice?: number;
+  unit?: string;
+  category?: string;
+  transactionDate?: string;
+  paymentMethod?: 'TIEN_MAT' | 'CHUYEN_KHOAN';
+  paymentStatus?: 'DA_THANH_TOAN' | 'CHUA_THANH_TOAN';
+  note?: string;
+}
+
 export interface ProductSuggestion {
   id: number;
   productCode?: string;

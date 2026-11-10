@@ -39,10 +39,13 @@ export const RevenueDetailScreen: React.FC<RevenueDetailScreenProps> = ({ onBack
   const [selectedItem, setSelectedItem] = useState<RevenueItem | null>(null);
   const [showActionModal, setShowActionModal] = useState<boolean>(false);
 
-  // Danh mục mặt hàng khởi tạo
+  // Danh mục mặt hàng gợi ý tự động từ phần Chi phí
   const [catalog, setCatalog] = useState<ProductCatalogItem[]>(DEFAULT_PRODUCTS);
   const [selectedProductId, setSelectedProductId] = useState<string>('');
+  const [selectedProductInfo, setSelectedProductInfo] = useState<ProductCatalogItem | null>(null);
   const [catalogSearch, setCatalogSearch] = useState<string>('');
+  const [isSyncingCatalog, setIsSyncingCatalog] = useState<boolean>(false);
+  const [showSuggestionsDropdown, setShowSuggestionsDropdown] = useState<boolean>(false);
 
   // Form state cho việc tạo mới đơn trong doanh thu
   const [formIsRetailCustomer, setFormIsRetailCustomer] = useState<boolean>(false);
@@ -77,10 +80,40 @@ export const RevenueDetailScreen: React.FC<RevenueDetailScreenProps> = ({ onBack
     }
   }, [period]);
 
+  // Đồng bộ thủ công từ Chi phí
+  const handleSyncCatalogFromExpenses = useCallback(async (showToast = true) => {
+    setIsSyncingCatalog(true);
+    try {
+      const fresh = await productCatalogService.syncFromExpenses(true);
+      setCatalog(fresh);
+      if (showToast) {
+        Alert.alert(
+          'Đồng bộ thành công',
+          `Đã tự động lấy ${fresh.length} sản phẩm gợi ý kèm đơn giá từ phần Chi phí nhập hàng!`
+        );
+      }
+    } catch (err: any) {
+      console.warn('Lỗi đồng bộ sản phẩm từ chi phí:', err);
+    } finally {
+      setIsSyncingCatalog(false);
+    }
+  }, []);
+
   useEffect(() => {
     loadRevenueData();
-    // Load catalog ban đầu
-    productCatalogService.getCatalog().then((cat) => setCatalog(cat)).catch(() => {});
+
+    // 1. Tự động lấy các sản phẩm gợi ý từ phần chi phí ngay khi vào màn hình
+    productCatalogService.syncFromExpenses().then((cat) => setCatalog(cat)).catch(() => {});
+
+    // 2. Tự động cập nhật: Khi phần chi phí có cập nhật (thêm mới, chỉnh sửa, xóa),
+    // phần Doanh thu cũng lập tức cập nhật lại sản phẩm mà không cần reload app!
+    const unsubscribe = productCatalogService.subscribe((updatedCatalog) => {
+      setCatalog(updatedCatalog);
+    });
+
+    return () => {
+      unsubscribe();
+    };
   }, [loadRevenueData]);
 
   // STT tự động nhảy đến số tiếp theo
@@ -98,8 +131,9 @@ export const RevenueDetailScreen: React.FC<RevenueDetailScreenProps> = ({ onBack
     const today = new Date();
     const formattedToday = `${today.getDate().toString().padStart(2, '0')}/${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getFullYear()}`;
     
+    // Tự động kéo sản phẩm mới nhất từ Chi phí
     try {
-      const freshCatalog = await productCatalogService.getCatalog();
+      const freshCatalog = await productCatalogService.syncFromExpenses();
       setCatalog(freshCatalog);
     } catch {}
 
@@ -107,6 +141,8 @@ export const RevenueDetailScreen: React.FC<RevenueDetailScreenProps> = ({ onBack
     setFormCustomerName('');
     setFormProductName('');
     setSelectedProductId('');
+    setSelectedProductInfo(null);
+    setShowSuggestionsDropdown(false);
     setFormQuantity('0');
     setFormUnitPrice('');
     setFormDate(formattedToday);
@@ -139,26 +175,32 @@ export const RevenueDetailScreen: React.FC<RevenueDetailScreenProps> = ({ onBack
     }
   };
 
-  // Chọn mặt hàng khởi tạo trong danh mục mẫu (ĐƠN GIÁ TỰ ĐỘNG NHẢY THEO ID/TÊN MẶT HÀNG)
+  // Chọn mặt hàng gợi ý từ Chi phí (ĐƠN GIÁ TỰ ĐỘNG NHẢY THEO GIÁ GỢI Ý/GIÁ VỐN)
   const handleSelectProduct = (prod: ProductCatalogItem) => {
     setSelectedProductId(prod.id);
+    setSelectedProductInfo(prod);
     setFormProductName(prod.name);
-    setFormUnitPrice(prod.price.toLocaleString('vi-VN'));
+    setFormUnitPrice(prod.price ? prod.price.toLocaleString('vi-VN') : '');
     setShowCatalogModal(false);
+    setShowSuggestionsDropdown(false);
   };
 
-  // Người dùng nhập tay tên hàng: nếu khớp với mặt hàng đã lưu thì đơn giá tự động nhảy
+  // Người dùng nhập tay tên hàng: gợi ý tự động nếu khớp với sản phẩm từ Chi phí
   const handleProductNameChange = (text: string) => {
     setFormProductName(text);
+    setShowSuggestionsDropdown(text.trim().length > 0);
+
     const trimmed = text.trim().toLowerCase();
     const match = catalog.find(
       (p) => p.name.trim().toLowerCase() === trimmed || p.id.trim().toLowerCase() === trimmed
     );
     if (match) {
       setSelectedProductId(match.id);
-      setFormUnitPrice(match.price.toLocaleString('vi-VN'));
+      setSelectedProductInfo(match);
+      setFormUnitPrice(match.price ? match.price.toLocaleString('vi-VN') : '');
     } else {
       setSelectedProductId('');
+      setSelectedProductInfo(null);
     }
   };
 
@@ -835,31 +877,107 @@ export const RevenueDetailScreen: React.FC<RevenueDetailScreenProps> = ({ onBack
                 )}
               </View>
 
-              {/* 2. TÊN HÀNG & DANH MỤC MẶT HÀNG KHỞI TẠO (ĐƠN GIÁ TỰ NHẢY) */}
+              {/* 2. TÊN HÀNG & DANH MỤC MẶT HÀNG TỰ ĐỘNG LẤY TỪ CHI PHÍ */}
+              <View style={styles.syncStatusBanner}>
+                <View style={styles.syncStatusLeft}>
+                  <View style={styles.syncDotGreen} />
+                  <Text style={styles.syncStatusText}>
+                    Tự động đồng bộ từ Chi phí ({catalog.length} sản phẩm)
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.syncButtonSmall}
+                  onPress={() => handleSyncCatalogFromExpenses(true)}
+                  disabled={isSyncingCatalog}
+                >
+                  {isSyncingCatalog ? (
+                    <ActivityIndicator size="small" color="#059669" />
+                  ) : (
+                    <>
+                      <Ionicons name="refresh-outline" size={13} color="#059669" style={{ marginRight: 3 }} />
+                      <Text style={styles.syncButtonText}>Làm mới</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              </View>
+
               <View style={styles.fieldHeaderRow}>
-                <Text style={styles.formLabel}>Tên hàng (User nhập tay) *</Text>
+                <Text style={styles.formLabel}>Tên hàng (Gợi ý từ Chi phí) *</Text>
                 <TouchableOpacity
                   style={styles.catalogLinkBtn}
                   onPress={() => setShowCatalogModal(true)}
                   activeOpacity={0.7}
                 >
                   <Ionicons name="grid-outline" size={14} color="#0284C7" />
-                  <Text style={styles.catalogLinkText}>Kho mặt hàng ({catalog.length})</Text>
+                  <Text style={styles.catalogLinkText}>Kho mặt hàng Chi phí ({catalog.length})</Text>
                 </TouchableOpacity>
               </View>
 
               <TextInput
                 style={styles.formInput}
-                placeholder="Nhập tên mặt hàng (VD: Cà phê, Nước ngọt, Gạo...)"
+                placeholder="Nhập tên mặt hàng hoặc chọn gợi ý từ Chi phí..."
                 placeholderTextColor="#94A3B8"
                 value={formProductName}
                 onChangeText={handleProductNameChange}
               />
 
-              {/* Thanh gợi ý nhanh các mặt hàng đã khởi tạo */}
+              {/* Hộp gợi ý tự động khi người dùng gõ phím */}
+              {showSuggestionsDropdown && !selectedProductId && (
+                <View style={styles.autocompleteDropdown}>
+                  {catalog
+                    .filter((p) => p.name.toLowerCase().includes(formProductName.toLowerCase().trim()))
+                    .slice(0, 4)
+                    .map((p) => (
+                      <TouchableOpacity
+                        key={p.id}
+                        style={styles.autocompleteItem}
+                        onPress={() => handleSelectProduct(p)}
+                      >
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.autocompleteName}>
+                            <Text style={{ fontWeight: '700', color: '#0284C7' }}>[{p.id}]</Text> {p.name}
+                          </Text>
+                          <Text style={styles.autocompleteSub}>
+                            Vốn nhập: {p.costPriceFormatted || (p.costPrice ? p.costPrice.toLocaleString('vi-VN') : '—')} ₫
+                            {p.unit ? ` • ĐVT: ${p.unit}` : ''}
+                            {p.totalImportedQuantity ? ` • Đã nhập: ${p.totalImportedQuantity}` : ''}
+                          </Text>
+                        </View>
+                        <View style={styles.autocompletePriceBadge}>
+                          <Text style={styles.autocompletePriceLabel}>Giá bán:</Text>
+                          <Text style={styles.autocompletePrice}>{p.price.toLocaleString('vi-VN')} ₫</Text>
+                        </View>
+                      </TouchableOpacity>
+                    ))}
+                </View>
+              )}
+
+              {/* Thông tin chi tiết mặt hàng vừa chọn từ Chi phí */}
+              {selectedProductInfo && (
+                <View style={styles.selectedExpenseProductCard}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Ionicons name="checkmark-circle" size={16} color="#059669" style={{ marginRight: 6 }} />
+                    <Text style={styles.selectedExpenseProductTitle}>
+                      Sản phẩm được lấy từ phần Chi phí [{selectedProductInfo.id}]
+                    </Text>
+                  </View>
+                  <Text style={styles.selectedExpenseProductDesc}>
+                    • Giá vốn nhập: <Text style={{ fontWeight: '700' }}>{selectedProductInfo.costPriceFormatted || (selectedProductInfo.costPrice ? selectedProductInfo.costPrice.toLocaleString('vi-VN') : '—')} ₫</Text>
+                    {selectedProductInfo.suggestedSellingPriceFormatted ? ` ➔ Giá bán gợi ý: ${selectedProductInfo.suggestedSellingPriceFormatted} ₫` : ''}
+                    {selectedProductInfo.unit ? ` (${selectedProductInfo.unit})` : ''}
+                  </Text>
+                  {selectedProductInfo.lastSupplier ? (
+                    <Text style={styles.selectedExpenseProductSupplier}>
+                      • Nhà cung cấp gần nhất: {selectedProductInfo.lastSupplier}
+                    </Text>
+                  ) : null}
+                </View>
+              )}
+
+              {/* Thanh gợi ý nhanh các mặt hàng tự động lấy từ Chi phí */}
               <View style={styles.presetCatalogSection}>
                 <Text style={styles.presetSectionLabel}>
-                  Chọn mẫu mặt hàng đã khởi tạo (Đơn giá tự động nhảy):
+                  Gợi ý từ Chi phí nhập hàng (Chọn để tự động điền đơn giá):
                 </Text>
                 <ScrollView
                   horizontal={true}
@@ -896,6 +1014,11 @@ export const RevenueDetailScreen: React.FC<RevenueDetailScreenProps> = ({ onBack
                         >
                           {prod.price.toLocaleString('vi-VN')} ₫
                         </Text>
+                        {prod.costPrice ? (
+                          <Text style={styles.presetChipCost}>
+                            Vốn: {prod.costPriceFormatted || prod.costPrice.toLocaleString('vi-VN')} ₫
+                          </Text>
+                        ) : null}
                       </TouchableOpacity>
                     );
                   })}
@@ -1303,7 +1426,7 @@ export const RevenueDetailScreen: React.FC<RevenueDetailScreenProps> = ({ onBack
       </Modal>
 
       {/* ========================================================= */}
-      {/* MODAL 4: DANH MỤC MẶT HÀNG KHỞI TẠO (KHO MẶT HÀNG) */}
+      {/* MODAL 4: SẢN PHẨM GỢI Ý TỰ ĐỘNG TỪ CHI PHÍ (KHO MẶT HÀNG) */}
       {/* ========================================================= */}
       <Modal
         visible={showCatalogModal}
@@ -1318,12 +1441,27 @@ export const RevenueDetailScreen: React.FC<RevenueDetailScreenProps> = ({ onBack
         >
           <View style={styles.catalogModalCard}>
             <View style={styles.modalHeaderRow}>
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
                 <View style={styles.catalogIconBadge}>
                   <Ionicons name="cube-outline" size={18} color="#0284C7" />
                 </View>
-                <Text style={styles.modalTitle}>Danh mục mặt hàng khởi tạo</Text>
+                <View style={{ marginLeft: 8, flex: 1 }}>
+                  <Text style={styles.modalTitle} numberOfLines={1}>
+                    Sản phẩm gợi ý từ Chi phí
+                  </Text>
+                  <Text style={{ fontSize: 11, color: '#059669', fontWeight: '500' }}>
+                    Tự động đồng bộ từ chi phí nhập hàng
+                  </Text>
+                </View>
               </View>
+
+              <TouchableOpacity
+                style={{ padding: 4, marginRight: 8 }}
+                onPress={() => handleSyncCatalogFromExpenses(true)}
+              >
+                <Ionicons name="refresh" size={20} color="#059669" />
+              </TouchableOpacity>
+
               <TouchableOpacity onPress={() => setShowCatalogModal(false)}>
                 <Ionicons name="close" size={22} color="#64748B" />
               </TouchableOpacity>
@@ -1331,13 +1469,13 @@ export const RevenueDetailScreen: React.FC<RevenueDetailScreenProps> = ({ onBack
 
             <TextInput
               style={styles.catalogSearchInput}
-              placeholder="Tìm kiếm theo mã ID hoặc tên mặt hàng..."
+              placeholder="Tìm kiếm theo mã SP hoặc tên mặt hàng..."
               placeholderTextColor="#94A3B8"
               value={catalogSearch}
               onChangeText={setCatalogSearch}
             />
 
-            <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 320 }}>
+            <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 360 }}>
               {catalog
                 .filter(
                   (p) =>
@@ -1356,13 +1494,28 @@ export const RevenueDetailScreen: React.FC<RevenueDetailScreenProps> = ({ onBack
                     </View>
                     <View style={{ flex: 1, marginLeft: 10 }}>
                       <Text style={styles.catalogItemName}>{prod.name}</Text>
-                      {prod.unit ? (
-                        <Text style={styles.catalogItemUnit}>Đơn vị tính: {prod.unit}</Text>
+                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: 2 }}>
+                        {prod.unit ? (
+                          <Text style={styles.catalogItemUnit}>ĐVT: {prod.unit} • </Text>
+                        ) : null}
+                        {prod.costPrice ? (
+                          <Text style={{ fontSize: 11, color: '#64748B' }}>
+                            Vốn: <Text style={{ color: '#0F172A', fontWeight: '600' }}>{prod.costPriceFormatted || prod.costPrice.toLocaleString('vi-VN')} ₫</Text>
+                          </Text>
+                        ) : null}
+                      </View>
+                      {prod.lastSupplier ? (
+                        <Text style={{ fontSize: 10, color: '#94A3B8', marginTop: 1 }}>
+                          NCC: {prod.lastSupplier}
+                        </Text>
                       ) : null}
                     </View>
-                    <Text style={styles.catalogItemPrice}>
-                      {prod.price.toLocaleString('vi-VN')} ₫
-                    </Text>
+                    <View style={{ alignItems: 'flex-end', marginLeft: 6 }}>
+                      <Text style={{ fontSize: 10, color: '#059669', fontWeight: '600' }}>Giá bán gợi ý:</Text>
+                      <Text style={styles.catalogItemPrice}>
+                        {prod.price.toLocaleString('vi-VN')} ₫
+                      </Text>
+                    </View>
                     <Ionicons name="arrow-forward-circle" size={20} color="#059669" style={{ marginLeft: 8 }} />
                   </TouchableOpacity>
                 ))}
@@ -2247,6 +2400,134 @@ const styles = StyleSheet.create({
   presetChipPriceActive: {
     color: '#047857',
     fontWeight: '800',
+  },
+  presetChipCost: {
+    fontSize: 9,
+    color: '#64748B',
+    marginTop: 1,
+  },
+
+  // Đồng bộ từ Chi phí Banner
+  syncStatusBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#ECFDF5',
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+    borderRadius: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  syncStatusLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  syncDotGreen: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: '#10B981',
+    marginRight: 6,
+  },
+  syncStatusText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#047857',
+    flex: 1,
+  },
+  syncButtonSmall: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#6EE7B7',
+  },
+  syncButtonText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#059669',
+  },
+
+  // Gợi ý tự động (Autocomplete dropdown)
+  autocompleteDropdown: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#93C5FD',
+    borderRadius: 8,
+    marginTop: 4,
+    marginBottom: 6,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  autocompleteItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  autocompleteName: {
+    fontSize: 12.5,
+    fontWeight: '600',
+    color: '#0F172A',
+  },
+  autocompleteSub: {
+    fontSize: 10.5,
+    color: '#64748B',
+    marginTop: 2,
+  },
+  autocompletePriceBadge: {
+    alignItems: 'flex-end',
+    marginLeft: 8,
+  },
+  autocompletePriceLabel: {
+    fontSize: 9,
+    color: '#059669',
+    fontWeight: '600',
+  },
+  autocompletePrice: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#047857',
+  },
+
+  // Thẻ thông tin sản phẩm đã chọn từ Chi phí
+  selectedExpenseProductCard: {
+    backgroundColor: '#F0FDF4',
+    borderWidth: 1,
+    borderColor: '#86EFAC',
+    borderRadius: 8,
+    padding: 8,
+    marginTop: 6,
+    marginBottom: 4,
+  },
+  selectedExpenseProductTitle: {
+    fontSize: 11.5,
+    fontWeight: '700',
+    color: '#15803D',
+  },
+  selectedExpenseProductDesc: {
+    fontSize: 11,
+    color: '#166534',
+    marginTop: 3,
+  },
+  selectedExpenseProductSupplier: {
+    fontSize: 10.5,
+    color: '#65A30D',
+    marginTop: 1,
   },
 
   // Hàng 2 cột (Số lượng & Đơn giá)
